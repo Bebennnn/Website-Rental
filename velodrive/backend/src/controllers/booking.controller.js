@@ -1,5 +1,5 @@
-const bookingRepo = require('../repositories/booking.repository');
-const bookingService = require('../services/booking.service');
+const bookingRepo = require("../repositories/booking.repository");
+const bookingService = require("../services/booking.service");
 
 class BookingController {
   async getAll(req, res) {
@@ -13,8 +13,53 @@ class BookingController {
 
   async create(req, res) {
     try {
-      const created = await bookingService.createBooking(req.body);
-      return res.status(201).json({ success: true, data: created });
+      const created = await bookingService.createBooking({
+        ...req.body,
+        userId: req.user.id,
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: created,
+      });
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  async cancel(req, res) {
+    try {
+      const { code } = req.params;
+
+      const updated = await bookingService.cancelBooking(code, req.user.id);
+
+      return res.json({
+        success: true,
+        data: updated,
+        message: "Booking berhasil dibatalkan.",
+      });
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  async updatePayment(req, res) {
+    try {
+      const updated = await bookingService.updatePayment(
+        req.params.code,
+        req.body.paidAmount,
+      );
+      return res.json({
+        success: true,
+        data: updated,
+        message: "Pembayaran berhasil diperbarui.",
+      });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }

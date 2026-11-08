@@ -96,8 +96,13 @@ jobs:
       - name: Run frontend tests with coverage
         run: npx vitest run src/utils --coverage --coverage.include="src/utils/**/*.js"
 
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: velodrive/backend
+
       - name: Run backend tests
-        run: node --test backend/src/services/customer.service.test.js
+        run: npm test
+        working-directory: velodrive/backend
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4

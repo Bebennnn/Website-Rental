@@ -24,9 +24,10 @@ import {
   formatDateTime,
   computeEndDateTime,
   calculateRentalQuote,
+  calculateRentalPrice,
   getCategoryLabel,
 } from '../utils/pricing';
-
+import { filterVehiclesByCategory } from '../utils/filter';
 export default function UserStorefrontPage({
   currentUser,
   onLogout,
@@ -34,6 +35,7 @@ export default function UserStorefrontPage({
   vehicles,
   bookings,
   onCreateBooking,
+  onCancelBooking,
   initialCheckoutVehicle,
   onClearInitialCheckoutVehicle,
 }) {
@@ -61,23 +63,17 @@ export default function UserStorefrontPage({
   const [multiplier, setMultiplier] = useState(1);
   const [deliveryId, setDeliveryId] = useState('PICKUP_GARAGE');
 
-  // Menghasilkan waktu lokal untuk penyewaan
-  const getCurrentLocalDateTime = () => {
-    const now = new Date();
+  // State waktu dan lokasi penyewaan
+  const [startDateTime, setStartDateTime] = useState(() => {
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    tomorrow.setHours(9, 0, 0, 0);
 
-    now.setSeconds(0, 0);
-    now.setMinutes(now.getMinutes() + 1);
-
-    const localDate = new Date(
-      now.getTime() - now.getTimezoneOffset() * 60000
+    const local = new Date(
+      tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000
     );
 
-    return localDate.toISOString().slice(0, 16);
-  };
-
-  const [startDateTime, setStartDateTime] = useState(
-    () => getCurrentLocalDateTime()
-  );
+    return local.toISOString().slice(0, 16);
+  });
 
   const [pickupHub, setPickupHub] = useState(
     'Garasi Pasteur & Stasiun Bandung'
@@ -87,30 +83,20 @@ export default function UserStorefrontPage({
     'Kebutuhan Perjalanan Dalam Kota / Keluarga'
   );
 
-  const [formError, setFormError] = useState('');
-
-  // Filter kendaraan
+  const [formError, setFormError] = useState('');    // Filter kendaraan
   const filteredVehicles = useMemo(() => {
-    return vehicles.filter((v) => {
-      const matchBrand =
-        selectedBrand === 'ALL' || v.brand === selectedBrand;
+    const categoryVehicles =
+      selectedCategory === 'ALL'
+        ? vehicles
+        : filterVehiclesByCategory(vehicles, selectedCategory);
 
-      const matchCategory =
-        selectedCategory === 'ALL' || v.category === selectedCategory;
-
-      const matchBranch =
-        selectedBranch === 'ALL' || v.branchId === selectedBranch;
-
-      const matchTrans =
-        selectedTransmission === 'ALL' ||
-        v.transmission === selectedTransmission;
-
-      const currentRate =
-        v.rates[activePackageId] || v.rates.PKG_24H;
-
-      const matchBudget =
-        maxBudget === 'ALL' || currentRate <= Number(maxBudget);
-
+    return categoryVehicles.filter((v) => {
+      const matchBrand = selectedBrand === 'ALL' || v.brand === selectedBrand;
+      const matchCategory = selectedCategory === 'ALL' || v.category === selectedCategory;
+      const matchBranch = selectedBranch === 'ALL' || v.branchId === selectedBranch;
+      const matchTrans = selectedTransmission === 'ALL' || v.transmission === selectedTransmission;
+      const currentRate = v.rates[activePackageId] || v.rates.PKG_24H;
+      const matchBudget = maxBudget === 'ALL' || currentRate <= Number(maxBudget);
       const matchQuery =
         searchQuery.trim() === '' ||
         v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -146,23 +132,23 @@ export default function UserStorefrontPage({
   // Perhitungan estimasi biaya sewa
   const activeQuote = useMemo(() => {
     if (!selectedVehicle) return null;
-
-    return calculateRentalQuote({
+    const quote = calculateRentalQuote({
       vehicle: selectedVehicle,
       packageId: activePackageId,
       multiplier,
       serviceId: activeServiceId,
       deliveryId,
     });
-  }, [
-    selectedVehicle,
-    activePackageId,
-    multiplier,
-    activeServiceId,
-    deliveryId,
-  ]);
 
-  // Menghitung estimasi waktu pengembalian
+    if (!quote) return null;
+
+    const baseCost = calculateRentalPrice(quote.unitRate, Number(multiplier));
+    return {
+      ...quote,
+      baseCost,
+      grandTotal: baseCost + quote.driverCost + quote.deliveryCost + quote.depositCost,
+    };
+  }, [selectedVehicle, activePackageId, multiplier, activeServiceId, deliveryId]);
   const estimatedEndDateTime = useMemo(() => {
     if (!activeQuote) return '';
 
@@ -175,9 +161,6 @@ export default function UserStorefrontPage({
   // Membuka formulir pemesanan kendaraan
   const handleBookVehicleClick = (vehicle) => {
     setFormError('');
-
-    // Perbarui waktu setiap kali checkout dibuka
-    setStartDateTime(getCurrentLocalDateTime());
 
     const branchObj = BRANCHES.find(
       (b) => b.id === vehicle.branchId
@@ -212,18 +195,14 @@ export default function UserStorefrontPage({
     if (nextStep === 2) {
       const start = new Date(startDateTime);
 
-      // Validasi tanggal kosong atau tidak valid
       if (
         !startDateTime ||
         Number.isNaN(start.getTime())
       ) {
-        setFormError(
-          'Waktu mulai penyewaan tidak valid.'
-        );
+        setFormError('Waktu mulai penyewaan tidak valid.');
         return;
       }
 
-      // Validasi waktu mulai tidak boleh di masa lalu
       if (start.getTime() <= Date.now()) {
         setFormError(
           'Waktu mulai penyewaan harus lebih dari waktu sekarang.'
@@ -231,11 +210,8 @@ export default function UserStorefrontPage({
         return;
       }
 
-      // Validasi durasi penyewaan
       if (!activeQuote || activeQuote.totalHours <= 0) {
-        setFormError(
-          'Durasi penyewaan tidak valid.'
-        );
+        setFormError('Durasi penyewaan tidak valid.');
         return;
       }
     }
@@ -251,6 +227,20 @@ export default function UserStorefrontPage({
       return;
     }
 
+    if (currentUser.accountStatus === 'BLOCKED') {
+      setFormError(
+        'Akun Anda sedang diblokir dan tidak dapat melakukan booking.'
+      );
+      return;
+    }
+
+    if (!currentUser.verified) {
+      setFormError(
+        'Akun Anda belum diverifikasi admin. Silakan lengkapi data penyewa dan tunggu verifikasi sebelum booking.'
+      );
+      return;
+    }
+
     if (!rentalPurpose.trim()) {
       setFormError(
         'Mohon isi tujuan pemakaian kendaraan untuk verifikasi admin.'
@@ -258,42 +248,49 @@ export default function UserStorefrontPage({
       return;
     }
 
-    await onCreateBooking({
-      userId: currentUser.id,
-      customerName: currentUser.name,
-      customerEmail: currentUser.email,
-      customerPhone: currentUser.phone,
-      customerNik: currentUser.nik,
-      customerSim: currentUser.simA,
+    try {
+      await onCreateBooking({
+        userId: currentUser.id,
+        customerName: currentUser.name,
+        customerEmail: currentUser.email,
+        customerPhone: currentUser.phone,
+        customerNik: currentUser.nik,
+        customerSim: currentUser.simA,
 
-      vehicleId: selectedVehicle.id,
-      vehicleName: selectedVehicle.name,
-      plateNumber: selectedVehicle.plateNumber,
-      branchId: selectedVehicle.branchId,
+        vehicleId: selectedVehicle.id,
+        vehicleName: selectedVehicle.name,
+        plateNumber: selectedVehicle.plateNumber,
+        branchId: selectedVehicle.branchId,
 
-      pickupHub,
-      purpose: rentalPurpose.trim(),
+        pickupHub,
+        purpose: rentalPurpose.trim(),
 
-      packageId: activePackageId,
-      multiplier,
-      totalHours: activeQuote.totalHours,
+        packageId: activePackageId,
+        multiplier,
+        totalHours: activeQuote.totalHours,
 
-      serviceId: activeServiceId,
-      deliveryId,
+        serviceId: activeServiceId,
+        deliveryId,
 
-      startDateTime,
-      endDateTime: estimatedEndDateTime,
+        startDateTime,
+        endDateTime: estimatedEndDateTime,
 
-      baseCost: activeQuote.baseCost,
-      driverCost: activeQuote.driverCost,
-      deliveryCost: activeQuote.deliveryCost,
-      depositCost: activeQuote.depositCost,
-      grandTotal: activeQuote.grandTotal,
-    });
+        baseCost: activeQuote.baseCost,
+        driverCost: activeQuote.driverCost,
+        deliveryCost: activeQuote.deliveryCost,
+        depositCost: activeQuote.depositCost,
+        grandTotal: activeQuote.grandTotal,
+      });
 
-    closeCheckoutModal();
-    setUserSubView('MY_BOOKINGS');
+      closeCheckoutModal();
+      setUserSubView('MY_BOOKINGS');
+    } catch (error) {
+      setFormError(
+        error.message || 'Booking gagal dibuat. Silakan coba kembali.'
+      );
+    }
   };
+
 
   // Mengaktifkan atau menonaktifkan favorit
   const toggleFavorite = (id) => {
@@ -316,7 +313,6 @@ export default function UserStorefrontPage({
 
   return (
     <div className="min-h-screen bg-white text-zinc-900">
-
       <StorefrontHeader
         currentUser={currentUser}
         userSubView={userSubView}
@@ -330,7 +326,6 @@ export default function UserStorefrontPage({
       {/* SUB-VIEW 1: BERANDA & KATALOG */}
       {userSubView === 'HOME' && (
         <main>
-
           {/* HERO SECTION */}
           <HeroSection
             currentUser={currentUser}
@@ -344,9 +339,7 @@ export default function UserStorefrontPage({
             searchTab={searchTab}
             onSearchTabChange={(tab) => {
               setSearchTab(tab);
-              setSelectedCategory(
-                tab === 'ALL' ? 'ALL' : tab
-              );
+              setSelectedCategory(tab === 'ALL' ? 'ALL' : tab);
             }}
             activePackageId={activePackageId}
             packages={RENTAL_PACKAGES}
@@ -372,7 +365,6 @@ export default function UserStorefrontPage({
             className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-
               <div>
                 <h2 className="text-2xl font-bold text-zinc-900">
                   Pilihan Mobil Siap Jalan
@@ -457,7 +449,6 @@ export default function UserStorefrontPage({
             onBrandChange={setSelectedBrand}
             onCategoryChange={setSelectedCategory}
           />
-
         </main>
       )}
 
@@ -468,6 +459,7 @@ export default function UserStorefrontPage({
           bookings={myBookings}
           onLogin={() => onNavigateToAuth(null)}
           onBrowse={() => setUserSubView('HOME')}
+          onCancelBooking={onCancelBooking}
           serviceTypes={SERVICE_TYPES}
           formatDateTime={formatDateTime}
           formatIDR={formatIDR}
@@ -505,7 +497,6 @@ export default function UserStorefrontPage({
         formatIDR={formatIDR}
         formatDateTime={formatDateTime}
       />
-
     </div>
   );
 }

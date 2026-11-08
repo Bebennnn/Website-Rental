@@ -1,35 +1,63 @@
 
+const jwt = require('jsonwebtoken');
 const userRepo = require('../repositories/user.repository');
 const customerService = require('../services/customer.service');
 
 class AuthController {
-
   async login(req, res) {
     try {
       const { email, password } = req.body;
 
-      const user = await userRepo.findByEmail(email);
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email dan password wajib diisi.',
+        });
+      }
+
+      const user = await userRepo.findByEmailWithPassword(email);
 
       if (!user || user.password !== password) {
         return res.status(401).json({
           success: false,
-          message: 'Email atau password tidak sesuai.'
+          message: 'Email atau password salah.',
         });
       }
 
+      if (user.accountStatus !== 'ACTIVE') {
+        return res.status(403).json({
+          success: false,
+          message: 'Akun sedang diblokir.',
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          role: user.role || 'USER',
+        },
+        process.env.JWT_SECRET,
+        {
+          subject: user.id,
+          expiresIn: process.env.JWT_EXPIRES_IN || '8h',
+        }
+      );
+
+      const { password: _password, ...safeUser } = user;
+
       return res.json({
         success: true,
-        data: user
+        data: {
+          user: safeUser,
+          token,
+        },
       });
-
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: error.message
+        message: error.message,
       });
     }
   }
-
 
   async register(req, res) {
     try {
@@ -39,14 +67,14 @@ class AuthController {
       const validation = customerService.validasiDataPenyewa({
         name,
         email,
-        phone
+        phone,
       });
 
       if (!validation.valid) {
         return res.status(400).json({
           success: false,
           message: 'Validasi data gagal.',
-          errors: validation.errors
+          errors: validation.errors,
         });
       }
 
@@ -54,30 +82,26 @@ class AuthController {
       const cleanUser = customerService.bersihkanDataUser({
         name,
         email,
-        phone
+        phone,
       });
 
-      // Memeriksa password
-      if (!password || !password.trim()) {
+      if (!password || !password.trim() || !nik || !simA || !address) {
         return res.status(400).json({
           success: false,
-          message: 'Password wajib diisi.'
+          message: 'Password, NIK, SIM A, dan alamat wajib diisi.',
         });
       }
 
-      // Memeriksa email yang sudah terdaftar
       const existing = await userRepo.findByEmail(cleanUser.email);
 
       if (existing) {
         return res.status(400).json({
           success: false,
-          message: 'Email sudah terdaftar. Silakan gunakan halaman Masuk.'
+          message: 'Email sudah terdaftar. Silakan gunakan halaman Masuk.',
         });
       }
 
-      // Membuat akun baru
       const newUser = await userRepo.create({
-        id: `USR-${Date.now().toString().slice(-4)}`,
         name: cleanUser.name,
         email: cleanUser.email,
         password,
@@ -85,23 +109,21 @@ class AuthController {
         nik,
         simA,
         address,
-        verified: false
+        verified: false,
       });
 
       return res.status(201).json({
         success: true,
         message: 'Registrasi berhasil.',
-        data: newUser
+        data: newUser,
       });
-
     } catch (error) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
       });
     }
   }
-
 }
 
 module.exports = new AuthController();
