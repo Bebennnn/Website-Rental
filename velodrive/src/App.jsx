@@ -132,7 +132,8 @@ export default function App() {
     try {
       const saved = await apiService.createBooking(bookingPayload);
       setBookings((prev) => [saved, ...prev]);
-    } catch {
+    } catch (error) {
+      if (error.status) throw error;
       console.warn(
         'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
       );
@@ -183,6 +184,24 @@ export default function App() {
       }
       return targetBooking;
     }
+  };
+
+  const handleCancelBooking = async (code, userId) => {
+    const updated = await apiService.cancelBooking(code, userId);
+    setBookings((prev) => prev.map((booking) => booking.code === code ? updated : booking));
+    return updated;
+  };
+
+  const handleUpdateBookingPayment = async (code, paidAmount) => {
+    const updated = await apiService.updateBookingPayment(code, paidAmount);
+    setBookings((prev) => prev.map((booking) => booking.code === code ? updated : booking));
+    return updated;
+  };
+
+  const handleUpdateCustomerAccountStatus = async (customerId, accountStatus) => {
+    const updated = await apiService.updateCustomerAccountStatus(customerId, accountStatus);
+    setCustomers((prev) => prev.map((customer) => customer.id === customerId ? updated : customer));
+    return updated;
   };
 
   const handleToggleCustomerVerify = async (customerId, verified) => {
@@ -271,6 +290,7 @@ export default function App() {
               vehicles={vehicles}
               bookings={bookings}
               onCreateBooking={handleCreateBooking}
+              onCancelBooking={handleCancelBooking}
               initialCheckoutVehicle={initialCheckoutVehicle}
               onClearInitialCheckoutVehicle={() => setInitialCheckoutVehicle(null)}
             />
@@ -290,6 +310,8 @@ export default function App() {
                   navigate('/');
                 }}
                 onUpdateBookingStatus={handleUpdateBookingStatus}
+                onUpdateBookingPayment={handleUpdateBookingPayment}
+                onUpdateCustomerAccountStatus={handleUpdateCustomerAccountStatus}
                 onToggleCustomerVerify={handleToggleCustomerVerify}
                 onUpdateVehicleStatus={handleUpdateVehicleStatus}
                 onUpdateVehicleImage={handleUpdateVehicleImage}

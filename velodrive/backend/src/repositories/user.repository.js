@@ -2,20 +2,22 @@ const pool = require('../config/db');
 
 class UserRepository {
   mapRowToUser(row) {
-    if (!row) return null;
-    return {
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      password: row.password,
-      phone: row.phone,
-      nik: row.nik,
-      simA: row.sim_a,
-      address: row.address,
-      verified: row.verified,
-      joinedAt: row.joined_at,
-    };
-  }
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    nik: row.nik,
+    simA: row.sim_a,
+    address: row.address,
+    verified: row.verified,
+    role: row.role || 'USER',
+    accountStatus: row.account_status || 'ACTIVE',
+    joinedAt: row.joined_at,
+  };
+}
 
   async findAll() {
     const { rows } = await pool.query('SELECT * FROM users ORDER BY joined_at DESC');
@@ -25,6 +27,12 @@ class UserRepository {
   async findByEmail(email) {
     const { rows } = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email]);
     return this.mapRowToUser(rows[0]);
+  }
+
+  async findByEmailWithPassword(email) {
+    const { rows } = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+    if (!rows[0]) return null;
+    return { ...this.mapRowToUser(rows[0]), password: rows[0].password };
   }
 
   async findById(id) {
@@ -50,6 +58,14 @@ class UserRepository {
       Boolean(user.verified),
     ];
     const { rows } = await pool.query(sql, params);
+    return this.mapRowToUser(rows[0]);
+  }
+
+  async updateAccountStatus(id, accountStatus) {
+    const { rows } = await pool.query(
+      'UPDATE users SET account_status = $1 WHERE id = $2 RETURNING *',
+      [accountStatus, id]
+    );
     return this.mapRowToUser(rows[0]);
   }
 

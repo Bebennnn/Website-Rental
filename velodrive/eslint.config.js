@@ -8,6 +8,7 @@ export default [
   {
     ignores: [
       'dist/**',
+      'coverage/**',
       'node_modules/**',
       'backend/node_modules/**',
     ],
@@ -42,7 +43,8 @@ export default [
       ...js.configs.recommended.rules,
       ...reactHooks.configs.flat.recommended.rules,
 
-      'no-unused-vars': 'warn',
+      // Aturan custom diletakkan di bawah agar tidak tertimpa bawaan
+      'no-unused-vars': ['warn', { varsIgnorePattern: '^(React|_.*)$' }],
       'no-useless-assignment': 'error',
 
       'react-refresh/only-export-components': [

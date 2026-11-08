@@ -1,10 +1,14 @@
 
+const userRepo = require('../src/repositories/user.repository');
 const vehicleRepo = require('../src/repositories/vehicle.repository');
 const bookingRepo = require('../src/repositories/booking.repository');
 const bookingService = require('../src/services/booking.service');
 
 jest.mock('../src/repositories/vehicle.repository');
 jest.mock('../src/repositories/booking.repository');
+jest.mock('../src/repositories/user.repository', () => ({
+  findById: jest.fn(),
+}));
 
 describe('BookingService', () => {
   const vehicle = {
@@ -39,6 +43,18 @@ describe('BookingService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    userRepo.findById.mockResolvedValue({
+      id: 'USR-01',
+      name: 'Rizky Pratama',
+      email: 'rizky@example.com',
+      phone: '081234567890',
+      nik: '3273011205030001',
+      simA: '120503998877',
+      address: 'Bandung',
+      accountStatus: 'ACTIVE',
+      verified: true,
+    });
 
     vehicleRepo.findById.mockResolvedValue(vehicle);
 

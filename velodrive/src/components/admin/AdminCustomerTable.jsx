@@ -1,12 +1,12 @@
 import React from 'react';
 
-export default function AdminCustomerTable({ customers, bookings, onToggleVerify }) {
+export default function AdminCustomerTable({ customers, bookings, onToggleVerify, onUpdateAccountStatus }) {
   return (
     <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
       <thead><tr className="bg-zinc-50 border-b border-zinc-200 text-[11px] font-bold uppercase text-zinc-500">
         <th className="py-3.5 px-4">ID & Nama Penyewa</th><th className="py-3.5 px-4">Kontak & Domisili</th>
         <th className="py-3.5 px-4">Nomor NIK e-KTP</th><th className="py-3.5 px-4">Nomor SIM A</th>
-        <th className="py-3.5 px-4">Riwayat Sewa</th><th className="py-3.5 px-4">Status Verifikasi</th>
+        <th className="py-3.5 px-4">Riwayat Sewa</th><th className="py-3.5 px-4">Status Verifikasi</th><th className="py-3.5 px-4">Status Akun</th>
       </tr></thead>
       <tbody className="divide-y divide-zinc-200 text-xs">{customers.map((cust) => {
         const count = bookings.filter((booking) => booking.userId === cust.id).length;
@@ -16,6 +16,7 @@ export default function AdminCustomerTable({ customers, bookings, onToggleVerify
           <td className="py-3.5 px-4 font-mono font-semibold text-zinc-800">{cust.nik}</td><td className="py-3.5 px-4 font-mono font-semibold text-zinc-800">{cust.simA}</td>
           <td className="py-3.5 px-4 font-bold text-zinc-800">{count} Pesanan</td>
           <td className="py-3.5 px-4"><button onClick={() => onToggleVerify(cust.id, !cust.verified)} className={`px-3 py-1 rounded-full font-bold text-[11px] ${cust.verified ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{cust.verified ? '✓ KTP & SIM Valid' : 'Belum Diverifikasi (Klik Validasi)'}</button></td>
+          <td className="py-3.5 px-4"><button onClick={() => onUpdateAccountStatus(cust.id, cust.accountStatus === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED')} className={`px-3 py-1 rounded-full font-bold text-[11px] ${cust.accountStatus === 'BLOCKED' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}`}>{cust.accountStatus === 'BLOCKED' ? 'Diblokir (Aktifkan)' : 'Aktif (Blokir)'}</button></td>
         </tr>;
       })}</tbody>
     </table></div>
