@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { test } = require('@jest/globals');
 
 const customerService = require('./customer.service');
 
