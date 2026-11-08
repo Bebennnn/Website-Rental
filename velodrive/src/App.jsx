@@ -9,6 +9,7 @@ import { apiService } from './services/api';
 import UserStorefrontPage from './pages/UserStorefrontPage';
 import UserAuthPage from './pages/UserAuthPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import { updateVehicleStatus } from './utils/vehicleManagement';
 
 export default function App() {
   const navigate = useNavigate();
@@ -71,7 +72,21 @@ export default function App() {
       return;
     }
 
-    const loggedUser = await apiService.loginUser(email, password);
+    let loggedUser;
+    try {
+      loggedUser = await apiService.loginUser(email, password);
+    } catch {
+      console.warn(
+        'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
+      );
+      const found = customers.find(
+        (c) => c.email.trim().toLowerCase() === email.trim().toLowerCase()
+      );
+      if (!found) {
+        throw new Error('Email atau password tidak sesuai.');
+      }
+      loggedUser = found;
+    }
 
     setCurrentUser(loggedUser);
     sessionStorage.setItem('user', JSON.stringify(loggedUser));
@@ -193,7 +208,7 @@ export default function App() {
         'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
       );
       setVehicles((prev) =>
-        prev.map((v) => (v.id === vehicleId ? { ...v, status } : v))
+        prev.map((v) => (v.id === vehicleId ? updateVehicleStatus(v, status) : v))
       );
     }
   };
