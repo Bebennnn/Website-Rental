@@ -1,4 +1,5 @@
 import React from 'react';
+import { getBookingLateInfo } from '../../utils/lateFee';
 
 export default function AdminBookingTable({
   bookings,
@@ -82,6 +83,7 @@ export default function AdminBookingTable({
                 <td className="py-3.5 px-4">
                   <p className="font-semibold text-zinc-800">{booking.totalHours} Jam</p>
                   <p className="text-zinc-500">{formatDateTime(booking.startDateTime)}</p>
+                  <LateFeeNote booking={booking} formatIDR={formatIDR} />
                 </td>
                 <td className="py-3.5 px-4 text-xs"><p className="font-bold text-orange-600">{formatIDR(booking.grandTotal)}</p><p className="text-zinc-600">{booking.paymentStatus || 'UNPAID'}</p><p className="text-zinc-500">Dibayar: {formatIDR(booking.paidAmount || 0)}</p></td>
                 <td className="py-3.5 px-4">
@@ -112,5 +114,17 @@ export default function AdminBookingTable({
         </table>
       </div>
     </div>
+  );
+}
+
+// Menampilkan denda untuk booking ON_TRIP yang melewati waktu selesai sewa
+function LateFeeNote({ booking, formatIDR }) {
+  const lateInfo = getBookingLateInfo(booking);
+  if (!lateInfo.isLate) return null;
+
+  return (
+    <p className="mt-1 font-semibold text-red-600">
+      Terlambat {lateInfo.billedHours} jam • Denda {formatIDR(lateInfo.fee)}
+    </p>
   );
 }
