@@ -52,7 +52,17 @@ export default function UserStorefrontPage({
   const [checkoutStep, setCheckoutStep] = useState(1);
   const [multiplier, setMultiplier] = useState(1);
   const [deliveryId, setDeliveryId] = useState('PICKUP_GARAGE');
-  const [startDateTime, setStartDateTime] = useState('2025-05-20T09:00');
+  const getCurrentLocalDateTime = () => {
+    const now = new Date();
+    const localDate = new Date(
+      now.getTime() - now.getTimezoneOffset() * 60000
+    );
+
+    return localDate.toISOString().slice(0, 16);
+  };
+  const [startDateTime, setStartDateTime] = useState(
+    () => getCurrentLocalDateTime()
+  );
   const [pickupHub, setPickupHub] = useState('Garasi Pasteur & Stasiun Bandung');
   const [rentalPurpose, setRentalPurpose] = useState('Kebutuhan Perjalanan Dalam Kota / Keluarga');
   const [formError, setFormError] = useState('');
