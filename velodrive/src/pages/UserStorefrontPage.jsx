@@ -27,10 +27,7 @@ import {
   calculateRentalPrice,
   getCategoryLabel,
 } from '../utils/pricing';
-
-import { applyCheckoutAdjustments } from '../utils/checkout';
 import { filterVehiclesByCategory } from '../utils/filter';
-
 export default function UserStorefrontPage({
   currentUser,
   onLogout,
@@ -86,10 +83,7 @@ export default function UserStorefrontPage({
     'Kebutuhan Perjalanan Dalam Kota / Keluarga'
   );
 
-  const [formError, setFormError] = useState('');
-  const [promoCode, setPromoCode] = useState('');
-
-  // Filter kendaraan
+  const [formError, setFormError] = useState('');    // Filter kendaraan
   const filteredVehicles = useMemo(() => {
     const categoryVehicles =
       selectedCategory === 'ALL'
@@ -146,8 +140,15 @@ export default function UserStorefrontPage({
       deliveryId,
     });
 
-  // Rincian biaya akhir: deposit sesuai kategori mobil + diskon kode promo
-  vembalian
+    if (!quote) return null;
+
+    const baseCost = calculateRentalPrice(quote.unitRate, Number(multiplier));
+    return {
+      ...quote,
+      baseCost,
+      grandTotal: baseCost + quote.driverCost + quote.deliveryCost + quote.depositCost,
+    };
+  }, [selectedVehicle, activePackageId, multiplier, activeServiceId, deliveryId]);
   const estimatedEndDateTime = useMemo(() => {
     if (!activeQuote) return '';
 
@@ -181,7 +182,6 @@ export default function UserStorefrontPage({
   // Menutup formulir checkout
   const closeCheckoutModal = () => {
     setSelectedVehicle(null);
-    setPromoCode('');
 
     if (onClearInitialCheckoutVehicle) {
       onClearInitialCheckoutVehicle();
@@ -223,12 +223,7 @@ export default function UserStorefrontPage({
   const handleConfirmBooking = async (e) => {
     e.preventDefault();
 
-    if (!currentUser || !selectedVehicle || !activeQuote || !checkoutQuote) {
-      return;
-    }
-
-    if (checkoutQuote.promoError) {
-      setFormError(checkoutQuote.promoError);
+    if (!currentUser || !selectedVehicle || !activeQuote) {
       return;
     }
 
@@ -246,14 +241,12 @@ export default function UserStorefrontPage({
       return;
     }
 
-      baseCost: activeQuote.baseCost,
-      driverCost: activeQuote.driverCost,
-      deliveryCost: activeQuote.deliveryCost,
-      depositCost: checkoutQuote.depositCost,
-      discountCode: checkoutQuote.discountCode,
-      discountAmount: checkoutQuote.discountAmount,
-      grandTotal: checkoutQuote.grandTotal,
-    });
+    if (!rentalPurpose.trim()) {
+      setFormError(
+        'Mohon isi tujuan pemakaian kendaraan untuk verifikasi admin.'
+      );
+      return;
+    }
 
     try {
       await onCreateBooking({
@@ -476,7 +469,7 @@ export default function UserStorefrontPage({
       {/* MODAL CHECKOUT */}
       <CheckoutModal
         vehicle={selectedVehicle}
-        quote={checkoutQuote}
+        quote={activeQuote}
         user={currentUser}
         step={checkoutStep}
         packages={RENTAL_PACKAGES}
@@ -489,7 +482,6 @@ export default function UserStorefrontPage({
         startDateTime={startDateTime}
         pickupHub={pickupHub}
         rentalPurpose={rentalPurpose}
-        promoCode={promoCode}
         estimatedEndDateTime={estimatedEndDateTime}
         formError={formError}
         onClose={closeCheckoutModal}
@@ -501,7 +493,6 @@ export default function UserStorefrontPage({
         onDeliveryChange={setDeliveryId}
         onPickupChange={setPickupHub}
         onPurposeChange={setRentalPurpose}
-        onPromoChange={setPromoCode}
         onStepChange={handleCheckoutStepChange}
         formatIDR={formatIDR}
         formatDateTime={formatDateTime}
