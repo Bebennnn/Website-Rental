@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" role="img" aria-labelledby="title">
+  <title>Ilustrasi mobil VeloDrive</title>
+  <rect width="900" height="600" fill="#f4f4f5"/>
+  <path d="M170 380h560l-42-126c-8-24-30-40-55-40H330c-25 0-47 16-55 40l-42 126Z" fill="#ea580c"/>
+  <rect x="295" y="235" width="310" height="92" rx="18" fill="#27272a"/>
+  <circle cx="275" cy="390" r="52" fill="#18181b"/>
+  <circle cx="625" cy="390" r="52" fill="#18181b"/>
+  <circle cx="275" cy="390" r="22" fill="#a1a1aa"/>
+  <circle cx="625" cy="390" r="22" fill="#a1a1aa"/>
+  <text x="450" y="500" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" font-weight="700" fill="#3f3f46">VeloDrive</text>
+</svg>
