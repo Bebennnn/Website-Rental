@@ -32,6 +32,9 @@ CREATE TABLE vehicles (
     rate_24h NUMERIC(12, 2) NOT NULL CHECK (rate_24h > 0),
     status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE' CHECK (status IN ('AVAILABLE', 'RENTED', 'MAINTENANCE')),
     image_url TEXT NOT NULL,
+    current_km INTEGER CHECK (current_km >= 0),
+    next_service_km INTEGER CHECK (next_service_km >= 0),
+    next_service_date DATE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
