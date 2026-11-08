@@ -30,27 +30,6 @@ export default function App() {
   const [pendingVehicleToBook, setPendingVehicleToBook] = useState(null);
   const [initialCheckoutVehicle, setInitialCheckoutVehicle] = useState(null);
 
-  // Sinkronisasi otomatis dengan Backend Node.js + PostgreSQL jika server aktif
-  useEffect(() => {
-    async function loadFromBackend() {
-      try {
-        const [vData, bData, cData] = await Promise.all([
-          apiService.fetchVehicles(),
-          apiService.fetchBookings(),
-          apiService.fetchCustomers(),
-        ]);
-        if (vData?.length) setVehicles(vData);
-        if (bData?.length) setBookings(bData);
-        if (cData?.length) setCustomers(cData);
-      } catch {
-        console.warn(
-          'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
-        );
-      }
-    }
-    loadFromBackend();
-  }, []);
-
   const handleNavigateToAuth = (vehicleToBook = null) => {
     setPendingVehicleToBook(vehicleToBook);
     navigate('/');
@@ -58,8 +37,8 @@ export default function App() {
 
   const handleLoginSuccess = async (email, password, role = 'TENANT') => {
     if (role === 'ADMIN') {
-      const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
-      const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+      const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@velodrive.id';
+      const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'adminvelodrive2026';
       if (!adminEmail || !adminPassword) {
         throw new Error('Konfigurasi akun admin belum tersedia.');
       }
@@ -69,12 +48,44 @@ export default function App() {
       const adminUser = { id: 'ADMIN-01', name: 'Admin Operasional Pusat', email, role: 'ADMIN' };
       setCurrentUser(adminUser);
       sessionStorage.setItem('user', JSON.stringify(adminUser));
+
+      try {
+        const [vData, bData, cData] = await Promise.all([
+          apiService.fetchVehicles(),
+          apiService.fetchBookings(),
+          apiService.fetchCustomers(),
+        ]);
+        if (vData?.length) setVehicles(vData);
+        if (bData?.length) setBookings(bData);
+        if (cData?.length) setCustomers(cData);
+      } catch (error) {
+        console.warn('Gagal tarik data untuk Admin (mungkin karena Token JWT hilang):', error);
+      }
       return;
     }
 
     let loggedUser;
     try {
-      loggedUser = await apiService.loginUser(email, password);
+      // Panggil API Login
+      const response = await apiService.loginUser(email, password);
+      
+      // 1. SIMPAN TOKEN KE LOCAL STORAGE
+      if (response && response.token) {
+        localStorage.setItem('token', response.token);
+      }
+
+      loggedUser = response.user || response;
+
+      // 2. AMBIL DATA DARI BACKEND HANYA SETELAH TOKEN TERSIMPAN
+      const [vData, bData, cData] = await Promise.all([
+        apiService.fetchVehicles(),
+        apiService.fetchBookings(),
+        apiService.fetchCustomers(),
+      ]);
+      if (vData?.length) setVehicles(vData);
+      if (bData?.length) setBookings(bData);
+      if (cData?.length) setCustomers(cData);
+
     } catch {
       console.warn(
         'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
@@ -99,7 +110,14 @@ export default function App() {
   const handleRegisterSuccess = async (regForm) => {
     let createdUser;
     try {
-      createdUser = await apiService.registerUser(regForm);
+      const response = await apiService.registerUser(regForm);
+      
+      // SIMPAN TOKEN KE LOCAL STORAGE JIKA REGISTRASI MENGEMBALIKAN TOKEN
+      if (response && response.token) {
+        localStorage.setItem('token', response.token);
+      }
+      
+      createdUser = response.user || response;
     } catch {
       console.warn(
         'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
@@ -284,6 +302,8 @@ export default function App() {
               onLogout={() => {
                 setCurrentUser(null);
                 sessionStorage.removeItem('user');
+                // 2. HAPUS TOKEN SAAT LOGOUT DARI HALAMAN USER
+                //localStorage.removeItem('token'); 
                 navigate('/');
               }}
               onNavigateToAuth={handleNavigateToAuth}
@@ -307,6 +327,8 @@ export default function App() {
                 onLogout={() => {
                   setCurrentUser(null);
                   sessionStorage.removeItem('user');
+                  // 3. HAPUS TOKEN SAAT LOGOUT DARI HALAMAN ADMIN
+                  localStorage.removeItem('token'); 
                   navigate('/');
                 }}
                 onUpdateBookingStatus={handleUpdateBookingStatus}
