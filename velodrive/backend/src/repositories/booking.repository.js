@@ -30,6 +30,9 @@ class BookingRepository {
       deliveryCost: Number(row.delivery_cost),
       depositCost: Number(row.deposit_cost),
       grandTotal: Number(row.grand_total),
+      paidAmount: Number(row.paid_amount || 0),
+      remainingAmount: Math.max(0, Number(row.grand_total) - Number(row.paid_amount || 0)),
+      paymentStatus: row.payment_status || 'UNPAID',
       status: row.status,
       createdAt: row.created_at,
     };
@@ -53,14 +56,14 @@ class BookingRepository {
   }
 
   
+
 async createBookingWithTransaction(payload) {
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    // 1. Kunci kendaraan selama transaksi berlangsung.
-    // Request lain untuk kendaraan yang sama harus menunggu.
+    // Kunci kendaraan selama transaksi berlangsung.
     const vehicleResult = await client.query(
       `SELECT id, status
        FROM vehicles
@@ -77,8 +80,7 @@ async createBookingWithTransaction(payload) {
       );
     }
 
-    // 2. Periksa konflik jadwal di dalam transaksi.
-    // PENDING_VERIFICATION tidak memblokir jadwal.
+    // Periksa konflik jadwal.
     const conflictSql = `
       SELECT EXISTS (
         SELECT 1
@@ -105,15 +107,18 @@ async createBookingWithTransaction(payload) {
       );
     }
 
-    // 3. Simpan booking.
+    // Simpan booking beserta informasi pembayaran.
     const insertSql = `
       INSERT INTO bookings (
-        id, booking_code, user_id, customer_name, customer_email, customer_phone,
-        customer_nik, customer_sim, vehicle_id, vehicle_name, plate_number, branch_id,
-        pickup_hub, purpose, package_id, multiplier, total_hours, service_id, delivery_id,
-        start_time, end_time, base_cost, driver_cost, delivery_cost, deposit_cost, grand_total, status
+        id, booking_code, user_id, customer_name, customer_email,
+        customer_phone, customer_nik, customer_sim, vehicle_id,
+        vehicle_name, plate_number, branch_id, pickup_hub, purpose,
+        package_id, multiplier, total_hours, service_id, delivery_id,
+        start_time, end_time, base_cost, driver_cost, delivery_cost,
+        deposit_cost, grand_total, status, paid_amount, payment_status
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,
+        $16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29
       ) RETURNING *;
     `;
 
@@ -145,6 +150,8 @@ async createBookingWithTransaction(payload) {
       payload.depositCost,
       payload.grandTotal,
       payload.status || 'PENDING_VERIFICATION',
+      0,
+      'UNPAID',
     ];
 
     const { rows } = await client.query(insertSql, params);
@@ -158,6 +165,39 @@ async createBookingWithTransaction(payload) {
   } finally {
     client.release();
   }
+}
+
+
+  async findByCode(bookingCode) {
+    const { rows } = await pool.query('SELECT * FROM bookings WHERE booking_code = $1', [bookingCode]);
+    return this.mapRowToBooking(rows[0]);
+  }
+
+  async cancelByCustomer(bookingCode, userId) {
+    const { rows } = await pool.query(
+      `UPDATE bookings SET status = 'CANCELLED'
+       WHERE booking_code = $1 AND user_id = $2
+         AND status IN ('PENDING_VERIFICATION', 'CONFIRMED')
+       RETURNING *`, [bookingCode, userId]
+    );
+    return this.mapRowToBooking(rows[0]);
+  }
+
+async updatePayment(bookingCode, paidAmount) {
+  const { rows } = await pool.query(
+    `UPDATE bookings
+     SET paid_amount = $1::numeric,
+         payment_status = CASE
+           WHEN $1::numeric = 0 THEN 'UNPAID'
+           WHEN $1::numeric < grand_total THEN 'PARTIAL'
+           ELSE 'PAID'
+         END
+     WHERE booking_code = $2
+     RETURNING *`,
+    [paidAmount, bookingCode]
+  );
+
+  return this.mapRowToBooking(rows[0]);
 }
 
   async updateStatus(bookingCode, nextStatus) {

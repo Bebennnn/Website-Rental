@@ -7,7 +7,9 @@ async function request(endpoint, options = {}) {
   });
   const payload = await response.json();
   if (!response.ok || !payload.success) {
-    throw new Error(payload.message || 'Terjadi kesalahan pada server.');
+    const error = new Error(payload.message || 'Terjadi kesalahan pada server.');
+    error.status = response.status;
+    throw error;
   }
   return payload.data;
 }
@@ -29,10 +31,16 @@ export const apiService = {
   createBooking: (data) => request('/bookings', { method: 'POST', body: JSON.stringify(data) }),
   updateBookingStatus: (code, status) =>
     request(`/bookings/${code}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  cancelBooking: (code, userId) =>
+    request(`/bookings/${code}/cancel`, { method: 'PATCH', body: JSON.stringify({ userId }) }),
+  updateBookingPayment: (code, paidAmount) =>
+    request(`/bookings/${code}/payment`, { method: 'PATCH', body: JSON.stringify({ paidAmount }) }),
 
   fetchCustomers: () => request('/customers'),
   toggleVerifyCustomer: (id, verified) =>
     request(`/customers/${id}/verify`, { method: 'PATCH', body: JSON.stringify({ verified }) }),
+  updateCustomerAccountStatus: (id, accountStatus) =>
+    request(`/customers/${id}/account-status`, { method: 'PATCH', body: JSON.stringify({ accountStatus }) }),
 
   loginUser: (email, password) =>
     request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
