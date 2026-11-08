@@ -3,7 +3,6 @@ import {
   VEHICLE_STATUS,
   updateVehicleStatus,
   checkServiceSchedule,
-  calculateRevenue,
 } from './vehicleManagement.js';
 
 describe('Fitur 1: Ubah Status Mobil (updateVehicleStatus)', () => {

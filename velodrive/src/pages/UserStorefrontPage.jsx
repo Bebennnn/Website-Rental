@@ -24,9 +24,10 @@ import {
   formatDateTime,
   computeEndDateTime,
   calculateRentalQuote,
+  calculateRentalPrice,
   getCategoryLabel,
 } from '../utils/pricing';
-
+import { filterVehiclesByCategory } from '../utils/filter';
 export default function UserStorefrontPage({
   currentUser,
   onLogout,
@@ -84,26 +85,18 @@ export default function UserStorefrontPage({
 
   const [formError, setFormError] = useState('');    // Filter kendaraan
   const filteredVehicles = useMemo(() => {
-    return vehicles.filter((v) => {
-      const matchBrand =
-        selectedBrand === 'ALL' || v.brand === selectedBrand;
+    const categoryVehicles =
+      selectedCategory === 'ALL'
+        ? vehicles
+        : filterVehiclesByCategory(vehicles, selectedCategory);
 
-      const matchCategory =
-        selectedCategory === 'ALL' || v.category === selectedCategory;
-
-      const matchBranch =
-        selectedBranch === 'ALL' || v.branchId === selectedBranch;
-
-      const matchTrans =
-        selectedTransmission === 'ALL' ||
-        v.transmission === selectedTransmission;
-
-      const currentRate =
-        v.rates[activePackageId] || v.rates.PKG_24H;
-
-      const matchBudget =
-        maxBudget === 'ALL' || currentRate <= Number(maxBudget);
-
+    return categoryVehicles.filter((v) => {
+      const matchBrand = selectedBrand === 'ALL' || v.brand === selectedBrand;
+      const matchCategory = selectedCategory === 'ALL' || v.category === selectedCategory;
+      const matchBranch = selectedBranch === 'ALL' || v.branchId === selectedBranch;
+      const matchTrans = selectedTransmission === 'ALL' || v.transmission === selectedTransmission;
+      const currentRate = v.rates[activePackageId] || v.rates.PKG_24H;
+      const matchBudget = maxBudget === 'ALL' || currentRate <= Number(maxBudget);
       const matchQuery =
         searchQuery.trim() === '' ||
         v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -139,23 +132,23 @@ export default function UserStorefrontPage({
   // Perhitungan estimasi biaya sewa
   const activeQuote = useMemo(() => {
     if (!selectedVehicle) return null;
-
-    return calculateRentalQuote({
+    const quote = calculateRentalQuote({
       vehicle: selectedVehicle,
       packageId: activePackageId,
       multiplier,
       serviceId: activeServiceId,
       deliveryId,
     });
-  }, [
-    selectedVehicle,
-    activePackageId,
-    multiplier,
-    activeServiceId,
-    deliveryId,
-  ]);
 
-  // Menghitung estimasi waktu pengembalian
+    if (!quote) return null;
+
+    const baseCost = calculateRentalPrice(quote.unitRate, Number(multiplier));
+    return {
+      ...quote,
+      baseCost,
+      grandTotal: baseCost + quote.driverCost + quote.deliveryCost + quote.depositCost,
+    };
+  }, [selectedVehicle, activePackageId, multiplier, activeServiceId, deliveryId]);
   const estimatedEndDateTime = useMemo(() => {
     if (!activeQuote) return '';
 

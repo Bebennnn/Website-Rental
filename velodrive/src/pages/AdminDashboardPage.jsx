@@ -12,6 +12,7 @@ import AdminFleetTable from '../components/admin/AdminFleetTable';
 import AdminCustomerTable from '../components/admin/AdminCustomerTable';
 import AdminVehicleModal from '../components/admin/AdminVehicleModal';
 import { translateStatus } from '../components/admin/statusLabels';
+import { calculateTotalRevenue } from '../utils/dashboard';
 import {
   SERVICE_TYPES,
   INDONESIAN_CAR_CATEGORIES,

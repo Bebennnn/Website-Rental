@@ -5,8 +5,8 @@ import {
   INDONESIAN_CAR_CATEGORIES,
 } from '../constants/rentalData';
 
-export const calculateRentalPrice = (hourlyRate, durationHours, serviceFee = 0) => {
-  const values = [hourlyRate, durationHours, serviceFee];
+export const calculateRentalPrice = (hargaPerHari, durasiHari) => {
+  const values = [hargaPerHari, durasiHari];
   if (
     values.some(
       (value) => typeof value !== 'number' || !Number.isFinite(value) || value < 0
@@ -14,7 +14,8 @@ export const calculateRentalPrice = (hourlyRate, durationHours, serviceFee = 0) 
   ) {
     return 0;
   }
-  return hourlyRate * durationHours + serviceFee;
+  if (durasiHari === 0) return 0;
+  return hargaPerHari * durasiHari * 1.1;
 };
 
 export const formatIDR = (amount) =>
