@@ -29,8 +29,6 @@ class BookingRepository {
       driverCost: Number(row.driver_cost),
       deliveryCost: Number(row.delivery_cost),
       depositCost: Number(row.deposit_cost),
-      discountCode: row.discount_code ?? null,
-      discountAmount: Number(row.discount_amount ?? 0),
       grandTotal: Number(row.grand_total),
       paidAmount: Number(row.paid_amount || 0),
       remainingAmount: Math.max(0, Number(row.grand_total) - Number(row.paid_amount || 0)),
@@ -110,8 +108,12 @@ async createBookingWithTransaction(payload) {
     }
 
     // Simpan booking beserta informasi pembayaran.
-    const insertSql = `
-      
+   
+    // Simpan booking beserta informasi pembayaran.
+
+    // Simpan booking beserta informasi pembayaran.
+
+    // Simpan booking beserta informasi pembayaran.
     const insertSql = `
       INSERT INTO bookings (
         id, booking_code, user_id, customer_name, customer_email,
@@ -127,6 +129,8 @@ async createBookingWithTransaction(payload) {
         $29,$30,$31
       ) RETURNING *;
     `;
+
+
 
 
     const params = [
@@ -157,11 +161,11 @@ async createBookingWithTransaction(payload) {
       payload.depositCost,
       payload.grandTotal,
       payload.status || 'PENDING_VERIFICATION',
-      payload.discountCode || null,
-      payload.discountAmount || 0,
+      0,
+      'UNPAID',
     ];
 
-    const { rows } = await client.query(insertSql, params);
+    const { rows } = await client.query(query, params);
 
     await client.query('COMMIT');
 
@@ -183,7 +187,7 @@ async createBookingWithTransaction(payload) {
   async cancelByCustomer(bookingCode, userId) {
     const { rows } = await pool.query(
       `UPDATE bookings SET status = 'CANCELLED'
-       WHERE booking_code = $1 AND user_id = $2
+       WHERE booking_code = $1 AND user_id = $2i
          AND status IN ('PENDING_VERIFICATION', 'CONFIRMED')
        RETURNING *`, [bookingCode, userId]
     );
