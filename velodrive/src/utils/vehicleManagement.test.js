@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   VEHICLE_STATUS,
   updateVehicleStatus,
+  checkServiceSchedule,
 } from './vehicleManagement.js';
 
 describe('Fitur 1: Ubah Status Mobil (updateVehicleStatus)', () => {
@@ -59,5 +60,68 @@ describe('Fitur 1: Ubah Status Mobil (updateVehicleStatus)', () => {
     expect(() => updateVehicleStatus(dummyCar, '')).toThrow(/Status baru harus berupa teks/);
     expect(() => updateVehicleStatus(dummyCar, '   ')).toThrow(/Status baru harus berupa teks/);
     expect(() => updateVehicleStatus(dummyCar, 123)).toThrow(/Status baru harus berupa teks/);
+  });
+});
+
+describe('Fitur 2: Cek Jadwal Servis Mobil (checkServiceSchedule)', () => {
+  it('mengembalikan BELUM_WAKTUNYA jika km saat ini masih di bawah batas servis', () => {
+    const car = { id: 'ID-01', currentKm: 5000, nextServiceKm: 10000 };
+    const result = checkServiceSchedule(car);
+
+    expect(result.isDue).toBe(false);
+    expect(result.status).toBe('BELUM_WAKTUNYA');
+    expect(result.remainingKm).toBe(5000);
+    expect(result.message).toContain('belum waktunya diservis');
+  });
+
+  it('mengembalikan BELUM_WAKTUNYA jika tanggal servis masih di masa mendatang', () => {
+    const fixedToday = new Date('2026-01-01T00:00:00Z');
+    const car = { id: 'ID-02', serviceDueDate: '2026-06-01T00:00:00Z' };
+    const result = checkServiceSchedule(car, fixedToday);
+
+    expect(result.isDue).toBe(false);
+    expect(result.status).toBe('BELUM_WAKTUNYA');
+  });
+
+  it('mengembalikan SUDAH_WAKTUNYA jika km sudah melampaui batas servis', () => {
+    const car = { id: 'ID-03', currentKm: 10500, nextServiceKm: 10000 };
+    const result = checkServiceSchedule(car);
+
+    expect(result.isDue).toBe(true);
+    expect(result.status).toBe('SUDAH_WAKTUNYA');
+    expect(result.kmDiff).toBe(500);
+    expect(result.message).toContain('sudah waktunya diservis');
+  });
+
+  it('mengembalikan SUDAH_WAKTUNYA jika tanggal jatuh tempo servis telah terlewati', () => {
+    const fixedToday = new Date('2026-06-15T00:00:00Z');
+    const car = { id: 'ID-04', serviceInfo: { nextServiceDate: '2026-06-01T00:00:00Z' } };
+    const result = checkServiceSchedule(car, fixedToday);
+
+    expect(result.isDue).toBe(true);
+    expect(result.status).toBe('SUDAH_WAKTUNYA');
+  });
+
+  it('mengembalikan DATA_KOSONG jika data servis tidak tersedia', () => {
+    const car = { id: 'ID-05', name: 'Honda Brio' };
+    const result = checkServiceSchedule(car);
+
+    expect(result.isDue).toBe(false);
+    expect(result.status).toBe('DATA_KOSONG');
+    expect(result.message).toContain('Data servis kosong');
+  });
+
+  it('mengembalikan DATA_KOSONG jika argumen kendaraan null atau bukan objek', () => {
+    expect(checkServiceSchedule(null).status).toBe('DATA_KOSONG');
+    expect(checkServiceSchedule(undefined).status).toBe('DATA_KOSONG');
+  });
+
+  it('mengembalikan DATA_KOSONG jika nilai kilometer negatif', () => {
+    const car = { currentKm: -500, nextServiceKm: 10000 };
+    const result = checkServiceSchedule(car);
+
+    expect(result.isDue).toBe(false);
+    expect(result.status).toBe('DATA_KOSONG');
+    expect(result.message).toContain('tidak boleh negatif');
   });
 });
