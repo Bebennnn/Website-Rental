@@ -28,6 +28,7 @@ export default function CheckoutModal({
   startDateTime,
   pickupHub,
   rentalPurpose,
+  promoCode,
   estimatedEndDateTime,
   formError,
   onClose,
@@ -39,6 +40,7 @@ export default function CheckoutModal({
   onDeliveryChange,
   onPickupChange,
   onPurposeChange,
+  onPromoChange,
   onStepChange,
   formatIDR,
   formatDateTime,
@@ -200,6 +202,27 @@ export default function CheckoutModal({
                   />
                 </Field>
               </div>
+
+              {/* Kode promo */}
+              <Field label="Kode Promo (Opsional)">
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => onPromoChange(e.target.value)}
+                  placeholder="Contoh: VELO10, MAHASISWA, WEEKEND20"
+                  className="field uppercase"
+                />
+                {quote.promoError && (
+                  <p className="mt-1 text-[11px] font-semibold text-red-600">
+                    {quote.promoError}
+                  </p>
+                )}
+                {quote.discountAmount > 0 && (
+                  <p className="mt-1 text-[11px] font-semibold text-emerald-700">
+                    Kode {quote.discountCode} berhasil dipakai: diskon {quote.discountPercent}%.
+                  </p>
+                )}
+              </Field>
             </>
           ) : (
             <>
@@ -256,6 +279,13 @@ export default function CheckoutModal({
               label={`Sewa Pokok (${quote.packageLabel} x ${multiplier})`}
               value={formatIDR(quote.baseCost)}
             />
+
+            {quote.discountAmount > 0 && (
+              <Line
+                label={`Diskon ${quote.discountCode} (${quote.discountPercent}%)`}
+                value={`- ${formatIDR(quote.discountAmount)}`}
+              />
+            )}
 
             {quote.driverCost > 0 && (
               <Line

@@ -1,6 +1,10 @@
 const vehicleRepo = require('../repositories/vehicle.repository');
 const bookingRepo = require('../repositories/booking.repository');
+
+
+
 const userRepo = require('../repositories/user.repository');
+const { resolveDiscount, resolveDeposit } = require('./pricing.rules');
 
 const ALLOWED_TRANSITIONS = {
   PENDING_VERIFICATION: ['CONFIRMED', 'CANCELLED'],
@@ -10,8 +14,9 @@ const ALLOWED_TRANSITIONS = {
   CANCELLED: [],
 };
 
+
 class BookingService {
-  calculateServerQuote(vehicle, packageId, multiplier, serviceId, deliveryId) {
+  calculateServerQuote(vehicle, packageId, multiplier, serviceId, deliveryId, discountCode = null) {
     const packageHoursMap = {
       PKG_6H: 6,
       PKG_12H: 12,
@@ -61,13 +66,16 @@ class BookingService {
         ? 50000
         : 0;
 
-    const depositCost =
-      serviceId === 'SELF_DRIVE'
-        ? 300000
-        : 0;
+    // Deposit mengikuti kategori mobil, diskon hanya dari biaya sewa pokok
+    const depositCost = resolveDeposit(vehicle.category, serviceId);
+
+    const { discountCode: appliedCode, discountAmount } = resolveDiscount(
+      baseCost,
+      discountCode
+    );
 
     const grandTotal =
-      baseCost + driverCost + deliveryCost + depositCost;
+      baseCost - discountAmount + driverCost + deliveryCost + depositCost;
 
     return {
       totalHours,
@@ -75,6 +83,8 @@ class BookingService {
       driverCost,
       deliveryCost,
       depositCost,
+      discountCode: appliedCode,
+      discountAmount,
       grandTotal,
     };
   }
@@ -141,7 +151,8 @@ class BookingService {
       dto.packageId,
       dto.multiplier,
       dto.serviceId,
-      dto.deliveryId
+      dto.deliveryId,
+      dto.discountCode
     );
 
     // 4. Validasi waktu mulai

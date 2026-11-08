@@ -1,0 +1,3 @@
+ALTER TABLE bookings
+    ADD COLUMN IF NOT EXISTS discount_code VARCHAR(30),
+    ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(12, 2) NOT NULL DEFAULT 0;
