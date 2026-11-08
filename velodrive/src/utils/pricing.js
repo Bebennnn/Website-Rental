@@ -38,10 +38,34 @@ export const formatDateTime = (isoString) => {
 };
 
 export const computeEndDateTime = (startIso, durationHours) => {
+  // Validasi waktu mulai
+  if (!startIso || typeof startIso !== 'string') {
+    return '';
+  }
+
   const start = new Date(startIso);
-  if (Number.isNaN(start.getTime())) return '';
-  const end = new Date(start.getTime() + durationHours * 60 * 60 * 1000);
+
+  if (Number.isNaN(start.getTime())) {
+    return '';
+  }
+
+  // Validasi durasi
+  if (
+    typeof durationHours !== 'number' ||
+    !Number.isFinite(durationHours) ||
+    durationHours <= 0
+  ) {
+    return '';
+  }
+
+  // Hitung waktu selesai berdasarkan durasi sewa
+  const end = new Date(
+    start.getTime() + durationHours * 60 * 60 * 1000
+  );
+
+  // Format tanggal dan waktu
   const pad = (n) => String(n).padStart(2, '0');
+
   return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
 };
 

@@ -52,62 +52,113 @@ class BookingRepository {
     return rows[0].conflict_count > 0;
   }
 
-  async createBookingWithTransaction(payload) {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+  
+async createBookingWithTransaction(payload) {
+  const client = await pool.connect();
 
-      const insertSql = `
-        INSERT INTO bookings (
-          id, booking_code, user_id, customer_name, customer_email, customer_phone,
-          customer_nik, customer_sim, vehicle_id, vehicle_name, plate_number, branch_id,
-          pickup_hub, purpose, package_id, multiplier, total_hours, service_id, delivery_id,
-          start_time, end_time, base_cost, driver_cost, delivery_cost, deposit_cost, grand_total, status
-        ) VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27
-        ) RETURNING *;
-      `;
+  try {
+    await client.query('BEGIN');
 
-      const params = [
-        payload.id,
-        payload.code,
-        payload.userId,
-        payload.customerName,
-        payload.customerEmail,
-        payload.customerPhone,
-        payload.customerNik,
-        payload.customerSim,
+    // 1. Kunci kendaraan selama transaksi berlangsung.
+    // Request lain untuk kendaraan yang sama harus menunggu.
+    const vehicleResult = await client.query(
+      `SELECT id, status
+       FROM vehicles
+       WHERE id = $1
+       FOR UPDATE`,
+      [payload.vehicleId]
+    );
+
+    const vehicle = vehicleResult.rows[0];
+
+    if (!vehicle || vehicle.status !== 'AVAILABLE') {
+      throw new Error(
+        'Unit armada sedang tidak tersedia untuk disewa.'
+      );
+    }
+
+    // 2. Periksa konflik jadwal di dalam transaksi.
+    // PENDING_VERIFICATION tidak memblokir jadwal.
+    const conflictSql = `
+      SELECT EXISTS (
+        SELECT 1
+        FROM bookings
+        WHERE vehicle_id = $1
+          AND status IN ('CONFIRMED', 'ON_TRIP')
+          AND start_time < $3
+          AND end_time > $2
+      ) AS has_conflict;
+    `;
+
+    const conflictResult = await client.query(
+      conflictSql,
+      [
         payload.vehicleId,
-        payload.vehicleName,
-        payload.plateNumber,
-        payload.branchId,
-        payload.pickupHub,
-        payload.purpose,
-        payload.packageId,
-        payload.multiplier,
-        payload.totalHours,
-        payload.serviceId,
-        payload.deliveryId,
         payload.startDateTime,
         payload.endDateTime,
-        payload.baseCost,
-        payload.driverCost,
-        payload.deliveryCost,
-        payload.depositCost,
-        payload.grandTotal,
-        payload.status || 'PENDING_VERIFICATION',
-      ];
+      ]
+    );
 
-      const { rows } = await client.query(insertSql, params);
-      await client.query('COMMIT');
-      return this.mapRowToBooking(rows[0]);
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
+    if (conflictResult.rows[0].has_conflict) {
+      throw new Error(
+        'Jadwal unit bentrok dengan reservasi aktif lain pada jam tersebut.'
+      );
     }
+
+    // 3. Simpan booking.
+    const insertSql = `
+      INSERT INTO bookings (
+        id, booking_code, user_id, customer_name, customer_email, customer_phone,
+        customer_nik, customer_sim, vehicle_id, vehicle_name, plate_number, branch_id,
+        pickup_hub, purpose, package_id, multiplier, total_hours, service_id, delivery_id,
+        start_time, end_time, base_cost, driver_cost, delivery_cost, deposit_cost, grand_total, status
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27
+      ) RETURNING *;
+    `;
+
+    const params = [
+      payload.id,
+      payload.code,
+      payload.userId,
+      payload.customerName,
+      payload.customerEmail,
+      payload.customerPhone,
+      payload.customerNik,
+      payload.customerSim,
+      payload.vehicleId,
+      payload.vehicleName,
+      payload.plateNumber,
+      payload.branchId,
+      payload.pickupHub,
+      payload.purpose,
+      payload.packageId,
+      payload.multiplier,
+      payload.totalHours,
+      payload.serviceId,
+      payload.deliveryId,
+      payload.startDateTime,
+      payload.endDateTime,
+      payload.baseCost,
+      payload.driverCost,
+      payload.deliveryCost,
+      payload.depositCost,
+      payload.grandTotal,
+      payload.status || 'PENDING_VERIFICATION',
+    ];
+
+    const { rows } = await client.query(insertSql, params);
+
+    await client.query('COMMIT');
+
+    return this.mapRowToBooking(rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
+}
 
   async updateStatus(bookingCode, nextStatus) {
     const { rows } = await pool.query(
