@@ -2,6 +2,7 @@
  * Modul Manajemen Armada Kendaraan (Anggota 7)
  * Fitur 1: Ubah Status Mobil (updateVehicleStatus)
  * Fitur 2: Cek Jadwal Servis (checkServiceSchedule)
+ * Fitur 3: Hitung Pendapatan (calculateRevenue)
  */
 
 export const VEHICLE_STATUS = Object.freeze({
@@ -160,4 +161,46 @@ export function checkServiceSchedule(vehicle, referenceDate = new Date()) {
       : 'Mobil belum waktunya diservis.',
     remainingKm,
   };
+}
+
+/**
+ * 3. Hitung Pendapatan
+ * Menghitung total pendapatan dari transaksi booking yang selesai (COMPLETED) atau lunas (PAID).
+ * Booking yang batal (CANCELLED) atau masih pending secara ketat diabaikan dari perhitungan.
+ *
+ * Skenario Pengujian:
+ * - Satu transaksi selesai
+ * - Banyak transaksi valid
+ * - Data kosong / bukan array
+ * - Booking batal diabaikan
+ *
+ * @param {Array<Object>} bookings - Daftar objek transaksi booking
+ * @returns {number} Total akumulasi pendapatan (IDR)
+ */
+export function calculateRevenue(bookings) {
+  if (!Array.isArray(bookings) || bookings.length === 0) {
+    return 0;
+  }
+
+  const validStatuses = new Set(['COMPLETED', 'PAID', 'SELESAI', 'LUNAS']);
+
+  return bookings.reduce((total, booking) => {
+    if (!booking || typeof booking !== 'object') {
+      return total;
+    }
+
+    const rawStatus = (booking.status || '').toString().trim().toUpperCase();
+    if (!validStatuses.has(rawStatus)) {
+      return total;
+    }
+
+    const amount = Number(
+      booking.grandTotal ?? booking.totalPayment ?? booking.amount ?? 0
+    );
+    if (Number.isFinite(amount) && amount > 0) {
+      return total + amount;
+    }
+
+    return total;
+  }, 0);
 }

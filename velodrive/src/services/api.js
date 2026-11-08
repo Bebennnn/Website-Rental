@@ -19,6 +19,11 @@ export const apiService = {
     request(`/vehicles/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   updateVehicleImage: (id, imageUrl) =>
     request(`/vehicles/${id}/image`, { method: 'PATCH', body: JSON.stringify({ imageUrl }) }),
+  updateVehicleServiceSchedule: (id, schedule) =>
+    request(`/vehicles/${id}/service-schedule`, {
+      method: 'PATCH',
+      body: JSON.stringify(schedule),
+    }),
 
   fetchBookings: () => request('/bookings'),
   createBooking: (data) => request('/bookings', { method: 'POST', body: JSON.stringify(data) }),

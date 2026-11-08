@@ -27,6 +27,7 @@ export default function AdminDashboardPage({
   onToggleCustomerVerify,
   onUpdateVehicleStatus,
   onUpdateVehicleImage,
+  onUpdateVehicleServiceSchedule,
   onCreateVehicle,
   onLogout,
 }) {
@@ -226,12 +227,13 @@ export default function AdminDashboardPage({
           <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
             <div className="p-5 border-b border-zinc-200 flex flex-wrap items-center justify-between gap-4">
               <div><h2 className="text-lg font-bold text-zinc-900">Manajemen Armada & Gambar Mobil</h2>
-                <p className="text-xs text-zinc-500">Kelola ketersediaan unit, tarif 6/12/24 jam, atau ganti URL gambar mobil.</p></div>
+                <p className="text-xs text-zinc-500">Kelola unit dan tarif. Jadwal servis dihitung dari kilometer atau tanggal servis jika datanya tersedia.</p></div>
               <button onClick={() => setShowAddModal(true)} className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-1.5"><Plus className="w-4 h-4" />Tambah Armada Baru</button>
             </div>
             <AdminFleetTable vehicles={vehicles} editingImageCarId={editingImageCarId} tempImageUrl={tempImageUrl}
               onImageUrlChange={setTempImageUrl} onSaveImage={async (id) => { if (tempImageUrl.trim()) await onUpdateVehicleImage(id, tempImageUrl.trim()); setEditingImageCarId(null); }}
               onEditImage={(car) => { setEditingImageCarId(car.id); setTempImageUrl(car.imageUrl); }}
+              onUpdateServiceSchedule={onUpdateVehicleServiceSchedule}
               onUpdateStatus={onUpdateVehicleStatus} formatIDR={formatIDR} getCategoryLabel={getCategoryLabel} ImageIcon={ImageIcon} />
           </div>
         )}

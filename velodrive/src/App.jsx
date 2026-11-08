@@ -227,6 +227,11 @@ export default function App() {
     }
   };
 
+  const handleUpdateVehicleServiceSchedule = async (vehicleId, schedule) => {
+    const updated = await apiService.updateVehicleServiceSchedule(vehicleId, schedule);
+    setVehicles((prev) => prev.map((v) => (v.id === vehicleId ? updated : v)));
+  };
+
   const handleCreateVehicle = async (newVehicle) => {
     try {
       const created = await apiService.createVehicle(newVehicle);
@@ -288,6 +293,7 @@ export default function App() {
                 onToggleCustomerVerify={handleToggleCustomerVerify}
                 onUpdateVehicleStatus={handleUpdateVehicleStatus}
                 onUpdateVehicleImage={handleUpdateVehicleImage}
+                onUpdateVehicleServiceSchedule={handleUpdateVehicleServiceSchedule}
                 onCreateVehicle={handleCreateVehicle}
               />
             ) : (
