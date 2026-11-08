@@ -66,6 +66,9 @@ export default function AdminInspectionModal({
             <p className="font-bold text-zinc-900 uppercase text-[11px] mb-2">4. Rincian Tagihan & Deposit</p>
             {[
               [`Biaya Sewa Pokok (${inspectedBooking.totalHours} Jam)`, inspectedBooking.baseCost],
+              ...(inspectedBooking.discountAmount > 0
+                ? [[`Diskon (${inspectedBooking.discountCode})`, -inspectedBooking.discountAmount]]
+                : []),
               ['Biaya Supir', inspectedBooking.driverCost],
               ['Biaya Pengantaran', inspectedBooking.deliveryCost],
               ['Deposit Jaminan', inspectedBooking.depositCost],

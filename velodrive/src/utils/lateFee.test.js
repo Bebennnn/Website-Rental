@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { calculateLateFee, getLateHours, LATE_FEE_PER_HOUR } from './lateFee.js';
+import {
+  calculateLateFee,
+  getBookingLateInfo,
+  getLateHours,
+  LATE_FEE_PER_HOUR,
+} from './lateFee.js';
 
 describe('Fitur 3: Hitung Denda (calculateLateFee)', () => {
   it('tidak terlambat berarti denda nol', () => {
@@ -57,5 +62,29 @@ describe('getLateHours (pendukung hitung denda)', () => {
 
   it('melempar error jika format tanggal tidak valid', () => {
     expect(() => getLateHours('invalid', '2026-01-01T09:00')).toThrow(/Format tanggal/);
+  });
+});
+
+describe('getBookingLateInfo (tampilan admin)', () => {
+  const ontrip = { status: 'ON_TRIP', endDateTime: '2026-01-01T09:00:00Z' };
+
+  it('mengembalikan denda untuk booking ON_TRIP yang melewati waktu selesai', () => {
+    const info = getBookingLateInfo(ontrip, '2026-01-01T11:30:00Z');
+    expect(info).toEqual({ isLate: true, billedHours: 3, fee: 150000 });
+  });
+
+  it('tidak ada denda jika belum melewati waktu selesai', () => {
+    expect(getBookingLateInfo(ontrip, '2026-01-01T08:00:00Z').isLate).toBe(false);
+  });
+
+  it('tidak ada denda untuk status selain ON_TRIP', () => {
+    const done = { ...ontrip, status: 'COMPLETED' };
+    expect(getBookingLateInfo(done, '2026-01-02T09:00:00Z').fee).toBe(0);
+  });
+
+  it('aman terhadap data kosong atau tanggal tidak valid', () => {
+    expect(getBookingLateInfo(null).isLate).toBe(false);
+    expect(getBookingLateInfo({ status: 'ON_TRIP', endDateTime: 'xx' }).isLate).toBe(false);
+    expect(getBookingLateInfo({ status: 'ON_TRIP' }).isLate).toBe(false);
   });
 });
