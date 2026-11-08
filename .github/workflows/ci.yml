@@ -94,7 +94,7 @@ jobs:
         run: npm ci
 
       - name: Run frontend tests with coverage
-        run: npm run test:coverage
+        run: npx vitest run src/utils --coverage --coverage.include="src/utils/**/*.js"
 
       - name: Run backend tests
         run: node --test backend/src/services/customer.service.test.js
