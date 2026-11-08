@@ -22,8 +22,10 @@ import {
   formatDateTime,
   computeEndDateTime,
   calculateRentalQuote,
+  calculateRentalPrice,
   getCategoryLabel,
 } from '../utils/pricing';
+import { filterVehiclesByCategory } from '../utils/filter';
 export default function UserStorefrontPage({
   currentUser,
   onLogout,
@@ -57,7 +59,12 @@ export default function UserStorefrontPage({
   const [rentalPurpose, setRentalPurpose] = useState('Kebutuhan Perjalanan Dalam Kota / Keluarga');
   const [formError, setFormError] = useState('');
   const filteredVehicles = useMemo(() => {
-    return vehicles.filter((v) => {
+    const categoryVehicles =
+      selectedCategory === 'ALL'
+        ? vehicles
+        : filterVehiclesByCategory(vehicles, selectedCategory);
+
+    return categoryVehicles.filter((v) => {
       const matchBrand = selectedBrand === 'ALL' || v.brand === selectedBrand;
       const matchCategory = selectedCategory === 'ALL' || v.category === selectedCategory;
       const matchBranch = selectedBranch === 'ALL' || v.branchId === selectedBranch;
@@ -86,13 +93,22 @@ export default function UserStorefrontPage({
   }, [bookings, currentUser]);
   const activeQuote = useMemo(() => {
     if (!selectedVehicle) return null;
-    return calculateRentalQuote({
+    const quote = calculateRentalQuote({
       vehicle: selectedVehicle,
       packageId: activePackageId,
       multiplier,
       serviceId: activeServiceId,
       deliveryId,
     });
+
+    if (!quote) return null;
+
+    const baseCost = calculateRentalPrice(quote.unitRate, Number(multiplier));
+    return {
+      ...quote,
+      baseCost,
+      grandTotal: baseCost + quote.driverCost + quote.deliveryCost + quote.depositCost,
+    };
   }, [selectedVehicle, activePackageId, multiplier, activeServiceId, deliveryId]);
   const estimatedEndDateTime = useMemo(() => {
     if (!activeQuote) return '';

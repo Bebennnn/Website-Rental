@@ -12,6 +12,7 @@ import AdminFleetTable from '../components/admin/AdminFleetTable';
 import AdminCustomerTable from '../components/admin/AdminCustomerTable';
 import AdminVehicleModal from '../components/admin/AdminVehicleModal';
 import { translateStatus } from '../components/admin/statusLabels';
+import { calculateTotalRevenue } from '../utils/dashboard';
 import {
   SERVICE_TYPES,
   INDONESIAN_CAR_CATEGORIES,
@@ -53,9 +54,11 @@ export default function AdminDashboardPage({
     rate24h: 450000,
   });
   const adminMetrics = useMemo(() => {
-    const totalRevenue = bookings
-      .filter((b) => b.status !== 'CANCELLED')
-      .reduce((acc, b) => acc + b.grandTotal, 0);
+    const totalRevenue = calculateTotalRevenue(
+      bookings
+        .filter((b) => b.status !== 'CANCELLED')
+        .map((b) => ({ totalBayar: b.grandTotal }))
+    );
     const pendingCount = bookings.filter((b) => b.status === 'PENDING_VERIFICATION').length;
     const activeRentals = bookings.filter((b) => b.status === 'ON_TRIP').length;
     const availableFleet = vehicles.filter((v) => v.status === 'AVAILABLE').length;

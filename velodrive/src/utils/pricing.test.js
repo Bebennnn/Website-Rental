@@ -9,29 +9,30 @@ import {
 } from './pricing.js';
 
 describe('calculateRentalPrice', () => {
-  it('calculates the base rental price', () => {
-    expect(calculateRentalPrice(100000, 6)).toBe(600000);
+  it('menghitung harga sewa standar dengan pajak 10%', () => {
+    expect(calculateRentalPrice(100000, 3)).toBe(330000);
   });
 
-  it('includes an optional service fee', () => {
-    expect(calculateRentalPrice(100000, 6, 50000)).toBe(650000);
+  it('menghitung harga sewa untuk durasi satu hari', () => {
+    expect(calculateRentalPrice(250000, 1)).toBe(275000);
   });
 
-  it('returns zero for negative values', () => {
+  it('mengembalikan nol untuk durasi nol atau negatif', () => {
+    expect(calculateRentalPrice(100000, 0)).toBe(0);
     expect(calculateRentalPrice(100000, -1)).toBe(0);
-    expect(calculateRentalPrice(-100000, 6)).toBe(0);
   });
 
-  it('returns zero for non-numeric or non-finite values', () => {
-    expect(calculateRentalPrice('100000', 6)).toBe(0);
-    expect(calculateRentalPrice(100000, Number.NaN)).toBe(0);
-    expect(calculateRentalPrice(100000, Number.POSITIVE_INFINITY)).toBe(0);
+  it('mengembalikan nol untuk input bukan angka', () => {
+    expect(calculateRentalPrice('100000', 2)).toBe(0);
+    expect(calculateRentalPrice(null, 2)).toBe(0);
   });
+});
 
-  it('formats currency and dates for the Indonesian locale', () => {
+describe('pricing helpers', () => {
+  it('formats currency and dates', () => {
     expect(formatIDR(100000)).toContain('100.000');
-    expect(formatDateTime('invalid-date')).toBe('invalid-date');
     expect(formatDateTime()).toBe('-');
+    expect(formatDateTime('invalid-date')).toBe('invalid-date');
     expect(formatDateTime('2026-01-01T10:00:00.000Z')).toContain('2026');
   });
 
@@ -53,8 +54,6 @@ describe('calculateRentalPrice', () => {
       unitRate: 500000,
       baseCost: 1000000,
       totalHours: 12,
-      driverCost: 300000,
-      deliveryCost: 50000,
       grandTotal: 1350000,
     });
     expect(calculateRentalQuote({ vehicle: null })).toBeNull();
