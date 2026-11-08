@@ -4,13 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.include=src/utils/pricing.js",
-    "preview": "vite preview"
-  },
+  "dev": "vite",
+  "build": "vite build",
+  "lint": "eslint .",
+  "test": "vitest run src",
+  "test:coverage": "vitest run src --coverage --coverage.include=src/utils/pricing.js",
+  "preview": "vite preview"
+},
+
   "dependencies": {
     "@tailwindcss/vite": "^4.3.5",
     "lucide-react": "^1.70.0",
