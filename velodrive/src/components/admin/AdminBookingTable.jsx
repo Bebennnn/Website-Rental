@@ -17,6 +17,7 @@ export default function AdminBookingTable({
     { id: 'CONFIRMED', label: translateStatus('CONFIRMED') },
     { id: 'ON_TRIP', label: translateStatus('ON_TRIP') },
     { id: 'COMPLETED', label: translateStatus('COMPLETED') },
+    { id: 'CANCELLED', label: translateStatus('CANCELLED') },
   ];
 
   return (
@@ -55,7 +56,7 @@ export default function AdminBookingTable({
               <th className="py-3.5 px-4">Penyewa (NIK & SIM A)</th>
               <th className="py-3.5 px-4">Unit Mobil</th>
               <th className="py-3.5 px-4">Durasi & Jadwal</th>
-              <th className="py-3.5 px-4">Total Tagihan</th>
+              <th className="py-3.5 px-4">Pembayaran</th>
               <th className="py-3.5 px-4">Status</th>
               <th className="py-3.5 px-4 text-right">Tindakan Admin</th>
             </tr>
@@ -82,9 +83,7 @@ export default function AdminBookingTable({
                   <p className="font-semibold text-zinc-800">{booking.totalHours} Jam</p>
                   <p className="text-zinc-500">{formatDateTime(booking.startDateTime)}</p>
                 </td>
-                <td className="py-3.5 px-4 font-bold text-orange-600">
-                  {formatIDR(booking.grandTotal)}
-                </td>
+                <td className="py-3.5 px-4 text-xs"><p className="font-bold text-orange-600">{formatIDR(booking.grandTotal)}</p><p className="text-zinc-600">{booking.paymentStatus || 'UNPAID'}</p><p className="text-zinc-500">Dibayar: {formatIDR(booking.paidAmount || 0)}</p></td>
                 <td className="py-3.5 px-4">
                   <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] ${
                     booking.status === 'PENDING_VERIFICATION'

@@ -25,6 +25,8 @@ export default function AdminDashboardPage({
   bookings,
   customers,
   onUpdateBookingStatus,
+  onUpdateBookingPayment,
+  onUpdateCustomerAccountStatus,
   onToggleCustomerVerify,
   onUpdateVehicleStatus,
   onUpdateVehicleImage,
@@ -55,11 +57,9 @@ export default function AdminDashboardPage({
     rate24h: 450000,
   });
   const adminMetrics = useMemo(() => {
-    const totalRevenue = calculateTotalRevenue(
-      bookings
-        .filter((b) => b.status !== 'CANCELLED')
-        .map((b) => ({ totalBayar: b.grandTotal }))
-    );
+    const totalRevenue = bookings
+      .filter((b) => b.status !== 'CANCELLED')
+      .reduce((acc, b) => acc + Number(b.paidAmount || 0), 0);
     const pendingCount = bookings.filter((b) => b.status === 'PENDING_VERIFICATION').length;
     const activeRentals = bookings.filter((b) => b.status === 'ON_TRIP').length;
     const availableFleet = vehicles.filter((v) => v.status === 'AVAILABLE').length;
@@ -116,6 +116,12 @@ export default function AdminDashboardPage({
     });
   };
 
+  const handlePaymentChange = async (code, paidAmount) => {
+    const updated = await onUpdateBookingPayment(code, paidAmount);
+    if (inspectedBooking?.code === code) setInspectedBooking(updated);
+    return updated;
+  };
+
   const handleStatusChange = async (code, nextStatus) => {
     const updated = await onUpdateBookingStatus(code, nextStatus);
     if (inspectedBooking && inspectedBooking.code === code) {
@@ -136,7 +142,7 @@ export default function AdminDashboardPage({
       <div className="flex-1 p-6 lg:p-8 space-y-6 overflow-y-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-xl border border-zinc-200">
-            <p className="text-xs text-zinc-500 font-medium">Total Nilai Transaksi</p>
+            <p className="text-xs text-zinc-500 font-medium">Total Pembayaran Diterima</p>
             <p className="text-xl font-extrabold text-zinc-900 mt-1">
               {formatIDR(adminMetrics.totalRevenue)}
             </p>
@@ -245,7 +251,7 @@ export default function AdminDashboardPage({
           <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
             <div className="p-5 border-b border-zinc-200"><h2 className="text-lg font-bold text-zinc-900">Database Pelanggan & Verifikasi Identitas (e-KTP / SIM A)</h2>
               <p className="text-xs text-zinc-500">Admin dapat memeriksa keabsahan nomor NIK e-KTP dan SIM A setiap penyewa yang terdaftar.</p></div>
-            <AdminCustomerTable customers={customers} bookings={bookings} onToggleVerify={onToggleCustomerVerify} />
+            <AdminCustomerTable customers={customers} bookings={bookings} onToggleVerify={onToggleCustomerVerify} onUpdateAccountStatus={onUpdateCustomerAccountStatus} />
           </div>
         )}
 
@@ -255,6 +261,7 @@ export default function AdminDashboardPage({
         inspectedBooking={inspectedBooking}
         onClose={() => setInspectedBooking(null)}
         onStatusChange={handleStatusChange}
+        onPaymentChange={handlePaymentChange}
         serviceTypes={SERVICE_TYPES}
         formatDateTime={formatDateTime}
         formatIDR={formatIDR}
