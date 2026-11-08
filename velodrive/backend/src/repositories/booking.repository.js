@@ -165,7 +165,7 @@ async createBookingWithTransaction(payload) {
       'UNPAID',
     ];
 
-    const { rows } = await client.query(query, params);
+    const { rows } = await client.query(insertSql, params);
 
     await client.query('COMMIT');
 

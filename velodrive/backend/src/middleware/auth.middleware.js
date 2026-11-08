@@ -19,10 +19,10 @@ function authenticate(req, res, next) {
       role: decoded.role,
     };
     next();
-  } catch (error) {
+  } catch (eror) {
     return res.status(401).json({
       success: false,
-      message: 'Token tidak valid atau sudah kedaluwarsa.',
+      message: `Token tidak valid atau sudah kedaluwarsa ${eror}.`,
     });
   }
 }
