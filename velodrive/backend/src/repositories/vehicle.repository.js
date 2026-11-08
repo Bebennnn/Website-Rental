@@ -17,6 +17,11 @@ class VehicleRepository {
       plateNumber: row.plate_number,
       imageUrl: row.image_url,
       status: row.status,
+      currentKm: row.current_km === null ? null : Number(row.current_km),
+      nextServiceKm: row.next_service_km === null ? null : Number(row.next_service_km),
+      nextServiceDate: row.next_service_date
+        ? new Date(row.next_service_date).toISOString().slice(0, 10)
+        : null,
       rates: {
         PKG_6H: Number(row.rate_6h),
         PKG_12H: Number(row.rate_12h),
@@ -77,6 +82,17 @@ class VehicleRepository {
     const { rows } = await pool.query(
       'UPDATE vehicles SET image_url = $1 WHERE id = $2 RETURNING *',
       [imageUrl, id]
+    );
+    return this.mapRowToVehicle(rows[0]);
+  }
+
+  async updateServiceSchedule(id, schedule) {
+    const { rows } = await pool.query(
+      `UPDATE vehicles
+       SET current_km = $1, next_service_km = $2, next_service_date = $3
+       WHERE id = $4
+       RETURNING *`,
+      [schedule.currentKm, schedule.nextServiceKm, schedule.nextServiceDate, id]
     );
     return this.mapRowToVehicle(rows[0]);
   }

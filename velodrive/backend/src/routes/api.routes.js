@@ -15,6 +15,7 @@ router.get('/vehicles', vehicleController.getAll);
 router.post('/vehicles', vehicleController.create);
 router.patch('/vehicles/:id/status', vehicleController.updateStatus);
 router.patch('/vehicles/:id/image', vehicleController.updateImage);
+router.patch('/vehicles/:id/service-schedule', vehicleController.updateServiceSchedule);
 
 // Booking Routes
 router.get('/bookings', bookingController.getAll);
