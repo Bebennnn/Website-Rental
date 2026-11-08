@@ -17,7 +17,7 @@ env:
   NODE_VERSION: 22
 
 jobs:
-  # Stage 1: install
+  # Stage 1: install & cache prime
   install:
     name: Install dependencies
     runs-on: ubuntu-latest
@@ -32,12 +32,6 @@ jobs:
           cache-dependency-path: velodrive/package-lock.json
       - name: Install dependencies
         run: npm ci
-      - name: Save dependencies
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-modules
-          path: velodrive/node_modules
-          retention-days: 1
 
   # Stage 2: lint
   lint:
@@ -51,11 +45,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: velodrive/package-lock.json
-      - uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: velodrive/node_modules
-      - run: npm run lint
+      - name: Install dependencies (cached)
+        run: npm ci
+      - name: Run linting
+        run: npm run lint
 
   # Stage 3: audit
   audit:
@@ -69,8 +62,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: velodrive/package-lock.json
-      - run: npm ci
-      - run: npm audit --audit-level=high
+      - name: Install dependencies (cached)
+        run: npm ci
+      - name: Run security audit
+        run: npm audit --audit-level=high
 
   # Stage 4: test
   test:
@@ -84,11 +79,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: velodrive/package-lock.json
-      - uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: velodrive/node_modules
-      - run: npm run test:coverage
+      - name: Install dependencies (cached)
+        run: npm ci
+      - name: Run tests
+        run: npm run test:coverage
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -108,11 +102,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: velodrive/package-lock.json
-      - uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: velodrive/node_modules
-      - run: npm run build
+      - name: Install dependencies (cached)
+        run: npm ci
+      - name: Run build
+        run: npm run build
       - name: Upload production bundle
         uses: actions/upload-artifact@v4
         with:
@@ -134,8 +127,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: velodrive/package-lock.json
-      - run: npm ci
-      - uses: actions/download-artifact@v4
+      - name: Install dependencies (cached)
+        run: npm ci
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
         with:
           name: coverage-report
           path: velodrive/coverage
