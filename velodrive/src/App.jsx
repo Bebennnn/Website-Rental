@@ -56,7 +56,6 @@ export default function App() {
   };
 
   const handleLoginSuccess = async (email, password, role = 'TENANT') => {
-    let loggedUser = null;
     if (role === 'ADMIN') {
       const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
       const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
@@ -72,7 +71,7 @@ export default function App() {
       return;
     }
 
-    loggedUser = await apiService.loginUser(email, password);
+    const loggedUser = await apiService.loginUser(email, password);
 
     setCurrentUser(loggedUser);
     sessionStorage.setItem('user', JSON.stringify(loggedUser));
@@ -83,7 +82,7 @@ export default function App() {
   };
 
   const handleRegisterSuccess = async (regForm) => {
-    let createdUser = null;
+    let createdUser;
     try {
       createdUser = await apiService.registerUser(regForm);
     } catch {

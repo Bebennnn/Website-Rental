@@ -5,6 +5,18 @@ import {
   INDONESIAN_CAR_CATEGORIES,
 } from '../constants/rentalData';
 
+export const calculateRentalPrice = (hourlyRate, durationHours, serviceFee = 0) => {
+  const values = [hourlyRate, durationHours, serviceFee];
+  if (
+    values.some(
+      (value) => typeof value !== 'number' || !Number.isFinite(value) || value < 0
+    )
+  ) {
+    return 0;
+  }
+  return hourlyRate * durationHours + serviceFee;
+};
+
 export const formatIDR = (amount) =>
   new Intl.NumberFormat('id-ID', {
     style: 'currency',
