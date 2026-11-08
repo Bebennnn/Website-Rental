@@ -1,6 +1,3 @@
-
-const test = require('node:test');
-const assert = require('node:assert/strict');
 const {
   cekKetersediaanMobil,
   validasiBooking,
@@ -13,86 +10,86 @@ const dummyFleet = [
   { id: 'ID-03', name: 'Honda Brio', status: 'MAINTENANCE' },
 ];
 
-test('Anggota 2 - Fungsi 1: Cek Ketersediaan Mobil', async (t) => {
-  await t.test('TC 1.1: Mobil tersedia', () => {
+describe('Anggota 2 - Fungsi 1: Cek Ketersediaan Mobil', () => {
+  test('TC 1.1: Mobil tersedia', () => {
     const hasil = cekKetersediaanMobil(dummyFleet, 'ID-01');
-    assert.equal(hasil.isAvailable, true);
-    assert.equal(hasil.status, 'AVAILABLE');
-    assert.equal(hasil.message, 'Mobil tersedia');
+    expect(hasil.isAvailable).toBe(true);
+    expect(hasil.status).toBe('AVAILABLE');
+    expect(hasil.message).toBe('Mobil tersedia');
   });
 
-  await t.test('TC 1.2: Mobil sedang disewa', () => {
+  test('TC 1.2: Mobil sedang disewa', () => {
     const hasil = cekKetersediaanMobil(dummyFleet, 'ID-02');
-    assert.equal(hasil.isAvailable, false);
-    assert.equal(hasil.status, 'RENTED');
-    assert.equal(hasil.message, 'Mobil sedang disewa');
+    expect(hasil.isAvailable).toBe(false);
+    expect(hasil.status).toBe('RENTED');
+    expect(hasil.message).toBe('Mobil sedang disewa');
   });
 
-  await t.test('TC 1.3: Mobil sedang servis', () => {
+  test('TC 1.3: Mobil sedang servis', () => {
     const hasil = cekKetersediaanMobil(dummyFleet, 'ID-03');
-    assert.equal(hasil.isAvailable, false);
-    assert.equal(hasil.status, 'MAINTENANCE');
-    assert.equal(hasil.message, 'Mobil sedang servis');
+    expect(hasil.isAvailable).toBe(false);
+    expect(hasil.status).toBe('MAINTENANCE');
+    expect(hasil.message).toBe('Mobil sedang servis');
   });
 
-  await t.test('TC 1.4: ID tidak ditemukan', () => {
+  test('TC 1.4: ID tidak ditemukan', () => {
     const hasil = cekKetersediaanMobil(dummyFleet, 'ID-999');
-    assert.equal(hasil.isAvailable, false);
-    assert.equal(hasil.status, 'NOT_FOUND');
-    assert.equal(hasil.message, 'ID mobil tidak ditemukan');
+    expect(hasil.isAvailable).toBe(false);
+    expect(hasil.status).toBe('NOT_FOUND');
+    expect(hasil.message).toBe('ID mobil tidak ditemukan');
   });
 });
 
-test('Anggota 2 - Fungsi 2: Validasi Booking', async (t) => {
-  await t.test('TC 2.1: Data lengkap', () => {
+describe('Anggota 2 - Fungsi 2: Validasi Booking', () => {
+  test('TC 2.1: Data lengkap', () => {
     const input = {
       customerName: 'Rizky Pratama',
       vehicleId: 'ID-01',
       startDateTime: '2025-05-20T09:00',
     };
     const hasil = validasiBooking(input);
-    assert.equal(hasil.isValid, true);
-    assert.equal(hasil.message, 'Data booking lengkap');
+    expect(hasil.isValid).toBe(true);
+    expect(hasil.message).toBe('Data booking lengkap');
   });
 
-  await t.test('TC 2.2: Nama kosong', () => {
+  test('TC 2.2: Nama kosong', () => {
     const input = {
       customerName: '',
       vehicleId: 'ID-01',
       startDateTime: '2025-05-20T09:00',
     };
     const hasil = validasiBooking(input);
-    assert.equal(hasil.isValid, false);
-    assert.equal(hasil.errorField, 'customerName');
-    assert.equal(hasil.message, 'Nama tidak boleh kosong');
+    expect(hasil.isValid).toBe(false);
+    expect(hasil.errorField).toBe('customerName');
+    expect(hasil.message).toBe('Nama tidak boleh kosong');
   });
 
-  await t.test('TC 2.3: Mobil kosong', () => {
+  test('TC 2.3: Mobil kosong', () => {
     const input = {
       customerName: 'Rizky Pratama',
       vehicleId: '',
       startDateTime: '2025-05-20T09:00',
     };
     const hasil = validasiBooking(input);
-    assert.equal(hasil.isValid, false);
-    assert.equal(hasil.errorField, 'vehicleId');
-    assert.equal(hasil.message, 'Mobil tidak boleh kosong');
+    expect(hasil.isValid).toBe(false);
+    expect(hasil.errorField).toBe('vehicleId');
+    expect(hasil.message).toBe('Mobil tidak boleh kosong');
   });
 
-  await t.test('TC 2.4: Tanggal kosong', () => {
+  test('TC 2.4: Tanggal kosong', () => {
     const input = {
       customerName: 'Rizky Pratama',
       vehicleId: 'ID-01',
       startDateTime: '',
     };
     const hasil = validasiBooking(input);
-    assert.equal(hasil.isValid, false);
-    assert.equal(hasil.errorField, 'startDateTime');
-    assert.equal(hasil.message, 'Tanggal tidak boleh kosong');
+    expect(hasil.isValid).toBe(false);
+    expect(hasil.errorField).toBe('startDateTime');
+    expect(hasil.message).toBe('Tanggal tidak boleh kosong');
   });
 });
 
-test('Anggota 2 - Fungsi 3: Cek Bentrok Jadwal', async (t) => {
+describe('Anggota 2 - Fungsi 3: Cek Bentrok Jadwal', () => {
   const daftarBookingAktif = [
     {
       code: 'INV-849201',
@@ -103,39 +100,39 @@ test('Anggota 2 - Fungsi 3: Cek Bentrok Jadwal', async (t) => {
     },
   ];
 
-  await t.test('TC 3.1: Tidak bentrok (jadwal di hari berbeda)', () => {
+  test('TC 3.1: Tidak bentrok (jadwal di hari berbeda)', () => {
     const hasil = cekBentrokJadwal(
       '2025-05-20T08:00',
       '2025-05-21T08:00',
       daftarBookingAktif,
       'ID-01'
     );
-    assert.equal(hasil.isConflict, false);
-    assert.equal(hasil.status, 'SAFE');
-    assert.equal(hasil.message, 'Tidak bentrok');
+    expect(hasil.isConflict).toBe(false);
+    expect(hasil.status).toBe('SAFE');
+    expect(hasil.message).toBe('Tidak bentrok');
   });
 
-  await t.test('TC 3.2: Jadwal bertabrakan (jam sewa beririsan dengan booking lama)', () => {
+  test('TC 3.2: Jadwal bertabrakan (jam sewa beririsan dengan booking lama)', () => {
     const hasil = cekBentrokJadwal(
       '2025-05-15T12:00',
       '2025-05-16T12:00',
       daftarBookingAktif,
       'ID-01'
     );
-    assert.equal(hasil.isConflict, true);
-    assert.equal(hasil.status, 'CONFLICT');
-    assert.equal(hasil.message, 'Jadwal bertabrakan dengan booking yang sudah ada');
+    expect(hasil.isConflict).toBe(true);
+    expect(hasil.status).toBe('CONFLICT');
+    expect(hasil.message).toBe('Jadwal bertabrakan dengan booking yang sudah ada');
   });
 
-  await t.test('TC 3.3: Booking setelah jadwal sebelumnya (mulai tepat saat sewa lama selesai)', () => {
+  test('TC 3.3: Booking setelah jadwal sebelumnya (mulai tepat saat sewa lama selesai)', () => {
     const hasil = cekBentrokJadwal(
       '2025-05-16T08:00',
       '2025-05-17T08:00',
       daftarBookingAktif,
       'ID-01'
     );
-    assert.equal(hasil.isConflict, false);
-    assert.equal(hasil.status, 'AFTER_PREVIOUS');
-    assert.equal(hasil.message, 'Tidak bentrok (booking setelah jadwal sebelumnya)');
+    expect(hasil.isConflict).toBe(false);
+    expect(hasil.status).toBe('AFTER_PREVIOUS');
+    expect(hasil.message).toBe('Tidak bentrok (booking setelah jadwal sebelumnya)');
   });
 });
