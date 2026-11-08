@@ -6,29 +6,18 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   globalIgnores(['dist']),
+  js.configs.recommended,
+  reactHooks.configs.flat.recommended,
+  reactRefresh.configs.vite,
   {
     files: ['**/*.{js,jsx}'],
-    extends: [
-      js.configs.recommended,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-    ],
     languageOptions: {
-      globals: globals.browser,
+      globals: { ...globals.browser, ...globals.node },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
-    "env": {
-    "node": true,
-    "commonjs": true,
-    "es2021": true
+    rules: {
+      'no-unused-vars': 'warn',
+      'no-useless-assignment': 'error',
+    },
   },
-  "extends": "eslint:recommended",
-  "parserOptions": {
-    "ecmaVersion": 12
-  },
-  "rules": {
-    "no-unused-vars": "warn"
-  }
-  },
-  
 ])

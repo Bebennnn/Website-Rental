@@ -13,8 +13,6 @@ import AdminCustomerTable from '../components/admin/AdminCustomerTable';
 import AdminVehicleModal from '../components/admin/AdminVehicleModal';
 import { translateStatus } from '../components/admin/statusLabels';
 import {
-  BRANCHES,
-  RENTAL_PACKAGES,
   SERVICE_TYPES,
   INDONESIAN_CAR_CATEGORIES,
   POPULAR_BRANDS,

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Car,
   Search,
 } from 'lucide-react';
 import StorefrontHeader from '../components/storefront/StorefrontHeader';
