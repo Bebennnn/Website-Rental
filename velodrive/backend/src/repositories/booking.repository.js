@@ -29,6 +29,8 @@ class BookingRepository {
       driverCost: Number(row.driver_cost),
       deliveryCost: Number(row.delivery_cost),
       depositCost: Number(row.deposit_cost),
+      discountCode: row.discount_code ?? null,
+      discountAmount: Number(row.discount_amount ?? 0),
       grandTotal: Number(row.grand_total),
       status: row.status,
       createdAt: row.created_at,
@@ -111,9 +113,10 @@ async createBookingWithTransaction(payload) {
         id, booking_code, user_id, customer_name, customer_email, customer_phone,
         customer_nik, customer_sim, vehicle_id, vehicle_name, plate_number, branch_id,
         pickup_hub, purpose, package_id, multiplier, total_hours, service_id, delivery_id,
-        start_time, end_time, base_cost, driver_cost, delivery_cost, deposit_cost, grand_total, status
+        start_time, end_time, base_cost, driver_cost, delivery_cost, deposit_cost, grand_total, status,
+        discount_code, discount_amount
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29
       ) RETURNING *;
     `;
 
@@ -145,6 +148,8 @@ async createBookingWithTransaction(payload) {
       payload.depositCost,
       payload.grandTotal,
       payload.status || 'PENDING_VERIFICATION',
+      payload.discountCode || null,
+      payload.discountAmount || 0,
     ];
 
     const { rows } = await client.query(insertSql, params);
