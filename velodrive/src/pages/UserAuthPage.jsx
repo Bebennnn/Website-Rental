@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { Car, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { formatIDR } from '../utils/pricing';
 
 export default function UserAuthPage({
   pendingVehicleToBook,
   onLoginSuccess,
   onRegisterSuccess,
-  onBackToStorefront,
 }) {
+  const navigate = useNavigate();
   const [authTab, setAuthTab] = useState('LOGIN'); // 'LOGIN' | 'REGISTER'
-  const [loginEmail, setLoginEmail] = useState('rizky@mahasiswa.ac.id');
-  const [loginPassword, setLoginPassword] = useState('123456');
+  const [loginRole, setLoginRole] = useState('TENANT');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
   const [regForm, setRegForm] = useState({
@@ -27,7 +29,8 @@ export default function UserAuthPage({
     e.preventDefault();
     setAuthError('');
     try {
-      await onLoginSuccess(loginEmail, loginPassword);
+      await onLoginSuccess(loginEmail, loginPassword, loginRole);
+      navigate(loginRole === 'ADMIN' ? '/admin' : '/home');
     } catch (err) {
       setAuthError(err.message || 'Email atau password tidak sesuai.');
     }
@@ -42,6 +45,7 @@ export default function UserAuthPage({
     }
     try {
       await onRegisterSuccess(regForm);
+      navigate('/home');
     } catch (err) {
       setAuthError(err.message || 'Gagal mendaftarkan akun.');
     }
@@ -140,7 +144,7 @@ export default function UserAuthPage({
 
             <button
               type="button"
-              onClick={onBackToStorefront}
+              onClick={() => navigate('/home')}
               className="text-xs font-semibold text-zinc-500 hover:text-zinc-900"
             >
               ← Kembali ke Katalog
@@ -150,28 +154,38 @@ export default function UserAuthPage({
           {authTab === 'LOGIN' ? (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
-                <h3 className="text-lg font-bold text-zinc-900">Masuk sebagai Penyewa</h3>
+                <h3 className="text-lg font-bold text-zinc-900">
+                  Masuk sebagai {loginRole === 'ADMIN' ? 'Admin' : 'Penyewa'}
+                </h3>
                 <p className="text-xs text-zinc-500">
-                  Gunakan akun demo yang sudah disiapkan atau akun yang baru Anda daftarkan.
+                  Masukkan email dan password untuk melanjutkan.
                 </p>
               </div>
 
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center justify-between text-xs">
-                <div>
-                  <p className="font-bold text-orange-900">Akun Demo Mahasiswa (Siap Pakai):</p>
-                  <p className="text-orange-800">
-                    Email: <strong>rizky@mahasiswa.ac.id</strong> | Pass: <strong>123456</strong>
-                  </p>
-                </div>
+              <div className="grid grid-cols-2 gap-1 rounded-lg bg-zinc-100 p-1 border border-zinc-200">
                 <button
                   type="button"
                   onClick={() => {
-                    setLoginEmail('rizky@mahasiswa.ac.id');
-                    setLoginPassword('123456');
+                    setLoginRole('TENANT');
+                    setAuthError('');
                   }}
-                  className="bg-orange-600 text-white font-semibold px-3 py-1.5 rounded text-[11px]"
+                  className={`rounded-md px-3 py-2 text-xs font-bold transition-colors ${
+                    loginRole === 'TENANT' ? 'bg-orange-600 text-white' : 'text-zinc-600'
+                  }`}
                 >
-                  Isi Otomatis
+                  Masuk sebagai Penyewa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginRole('ADMIN');
+                    setAuthError('');
+                  }}
+                  className={`rounded-md px-3 py-2 text-xs font-bold transition-colors ${
+                    loginRole === 'ADMIN' ? 'bg-orange-600 text-white' : 'text-zinc-600'
+                  }`}
+                >
+                  Masuk sebagai Admin
                 </button>
               </div>
 
@@ -209,7 +223,11 @@ export default function UserAuthPage({
                 type="submit"
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-lg text-sm transition-colors"
               >
-                {pendingVehicleToBook ? 'Masuk & Lanjut Sewa Mobil' : 'Masuk ke Akun Penyewa'}
+                {loginRole === 'ADMIN'
+                  ? 'Masuk ke Akun Admin'
+                  : pendingVehicleToBook
+                    ? 'Masuk & Lanjut Sewa Mobil'
+                    : 'Masuk ke Akun Penyewa'}
               </button>
             </form>
           ) : (

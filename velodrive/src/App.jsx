@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import {
   INITIAL_VEHICLES,
   INITIAL_BOOKINGS,
@@ -10,14 +11,21 @@ import UserAuthPage from './pages/UserAuthPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 
 export default function App() {
-  // 'USER_PAGE' | 'AUTH_PAGE' | 'ADMIN_PAGE'
-  const [currentRoute, setCurrentRoute] = useState('USER_PAGE');
+  const navigate = useNavigate();
 
   const [vehicles, setVehicles] = useState(INITIAL_VEHICLES);
   const [bookings, setBookings] = useState(INITIAL_BOOKINGS);
   const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
 
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const storedUser = sessionStorage.getItem('user');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      sessionStorage.removeItem('user');
+      return null;
+    }
+  });
   const [pendingVehicleToBook, setPendingVehicleToBook] = useState(null);
   const [initialCheckoutVehicle, setInitialCheckoutVehicle] = useState(null);
 
@@ -34,7 +42,9 @@ export default function App() {
         if (bData?.length) setBookings(bData);
         if (cData?.length) setCustomers(cData);
       } catch {
-        // Jika backend belum dinyalakan, otomatis gunakan state lokal
+        console.warn(
+          'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
+        );
       }
     }
     loadFromBackend();
@@ -42,51 +52,65 @@ export default function App() {
 
   const handleNavigateToAuth = (vehicleToBook = null) => {
     setPendingVehicleToBook(vehicleToBook);
-    setCurrentRoute('AUTH_PAGE');
+    navigate('/');
   };
 
-  const handleLoginSuccess = async (email, password) => {
-    let loggedUser = null;
-    try {
-      loggedUser = await apiService.loginUser(email, password);
-    } catch {
-      const found = customers.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-      );
-      if (!found) {
-        throw new Error('Email atau password tidak sesuai.');
+  const handleLoginSuccess = async (email, password, role = 'TENANT') => {
+    if (role === 'ADMIN') {
+      const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+      const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+      if (!adminEmail || !adminPassword) {
+        throw new Error('Konfigurasi akun admin belum tersedia.');
       }
-      loggedUser = found;
+      if (email.trim().toLowerCase() !== adminEmail.trim().toLowerCase() || password !== adminPassword) {
+        throw new Error('Email atau password admin tidak sesuai.');
+      }
+      const adminUser = { id: 'ADMIN-01', name: 'Admin Operasional Pusat', email, role: 'ADMIN' };
+      setCurrentUser(adminUser);
+      sessionStorage.setItem('user', JSON.stringify(adminUser));
+      return;
     }
 
+    const loggedUser = await apiService.loginUser(email, password);
+
     setCurrentUser(loggedUser);
+    sessionStorage.setItem('user', JSON.stringify(loggedUser));
     if (pendingVehicleToBook) {
       setInitialCheckoutVehicle(pendingVehicleToBook);
       setPendingVehicleToBook(null);
     }
-    setCurrentRoute('USER_PAGE');
   };
 
   const handleRegisterSuccess = async (regForm) => {
-    let createdUser = null;
+    let createdUser;
     try {
       createdUser = await apiService.registerUser(regForm);
     } catch {
+      console.warn(
+        'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
+      );
       createdUser = {
         id: `USR-0${customers.length + 1}`,
-        ...regForm,
+        name: regForm.name,
+        email: regForm.email,
+        phone: regForm.phone,
+        nik: regForm.nik,
+        simA: regForm.simA,
+        address: regForm.address,
         verified: false,
         joinedAt: 'Baru Saja',
       };
     }
 
-    setCustomers((prev) => [createdUser, ...prev]);
-    setCurrentUser(createdUser);
+    const userSession = { ...createdUser };
+    delete userSession.password;
+    setCustomers((prev) => [userSession, ...prev]);
+    setCurrentUser(userSession);
+    sessionStorage.setItem('user', JSON.stringify(userSession));
     if (pendingVehicleToBook) {
       setInitialCheckoutVehicle(pendingVehicleToBook);
       setPendingVehicleToBook(null);
     }
-    setCurrentRoute('USER_PAGE');
   };
 
   const handleCreateBooking = async (bookingPayload) => {
@@ -94,6 +118,9 @@ export default function App() {
       const saved = await apiService.createBooking(bookingPayload);
       setBookings((prev) => [saved, ...prev]);
     } catch {
+      console.warn(
+        'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
+      );
       const localBooking = {
         id: `BK-0${bookings.length + 1}`,
         code: `INV-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -111,6 +138,9 @@ export default function App() {
       setBookings((prev) => prev.map((b) => (b.code === bookingCode ? updated : b)));
       return updated;
     } catch {
+      console.warn(
+        'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
+      );
       let targetBooking = null;
       setBookings((prev) =>
         prev.map((b) => {
@@ -145,6 +175,9 @@ export default function App() {
       const updated = await apiService.toggleVerifyCustomer(customerId, verified);
       setCustomers((prev) => prev.map((c) => (c.id === customerId ? updated : c)));
     } catch {
+      console.warn(
+        'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
+      );
       setCustomers((prev) =>
         prev.map((c) => (c.id === customerId ? { ...c, verified } : c))
       );
@@ -156,6 +189,9 @@ export default function App() {
       const updated = await apiService.updateVehicleStatus(vehicleId, status);
       setVehicles((prev) => prev.map((v) => (v.id === vehicleId ? updated : v)));
     } catch {
+      console.warn(
+        'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
+      );
       setVehicles((prev) =>
         prev.map((v) => (v.id === vehicleId ? { ...v, status } : v))
       );
@@ -167,6 +203,9 @@ export default function App() {
       const updated = await apiService.updateVehicleImage(vehicleId, imageUrl);
       setVehicles((prev) => prev.map((v) => (v.id === vehicleId ? updated : v)));
     } catch {
+      console.warn(
+        'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
+      );
       setVehicles((prev) =>
         prev.map((v) => (v.id === vehicleId ? { ...v, imageUrl } : v))
       );
@@ -178,92 +217,71 @@ export default function App() {
       const created = await apiService.createVehicle(newVehicle);
       setVehicles((prev) => [created, ...prev]);
     } catch {
+      console.warn(
+        'Gagal menghubungi server, memuat data lokal sebagai fallback (Mode UTS)'
+      );
       setVehicles((prev) => [newVehicle, ...prev]);
     }
   };
 
   return (
     <div>
-      {/* BAR SIMULASI NAVIGASI ANTAR HALAMAN TERPISAH */}
-      <div className="bg-zinc-900 text-white border-b border-zinc-800 px-4 py-2 text-xs">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded bg-orange-600 font-bold text-[10px] uppercase">
-              Mode Halaman
-            </span>
-            <span className="text-zinc-300">
-              Pilih halaman yang ingin diuji (Pelanggan, Login User, atau Halaman Khusus Admin):
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setCurrentRoute('USER_PAGE')}
-              className={`px-3 py-1 rounded font-semibold transition-colors ${
-                currentRoute === 'USER_PAGE'
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-              }`}
-            >
-              1. Halaman Pelanggan (User)
-            </button>
-            <button
-              onClick={() => setCurrentRoute('AUTH_PAGE')}
-              className={`px-3 py-1 rounded font-semibold transition-colors ${
-                currentRoute === 'AUTH_PAGE'
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-              }`}
-            >
-              2. Halaman Login / Daftar User
-            </button>
-            <button
-              onClick={() => setCurrentRoute('ADMIN_PAGE')}
-              className={`px-3 py-1 rounded font-semibold transition-colors ${
-                currentRoute === 'ADMIN_PAGE'
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-              }`}
-            >
-              3. Halaman Khusus Admin (Terpisah)
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {currentRoute === 'USER_PAGE' && (
-        <UserStorefrontPage
-          currentUser={currentUser}
-          onLogout={() => setCurrentUser(null)}
-          onNavigateToAuth={handleNavigateToAuth}
-          vehicles={vehicles}
-          bookings={bookings}
-          onCreateBooking={handleCreateBooking}
-          initialCheckoutVehicle={initialCheckoutVehicle}
-          onClearInitialCheckoutVehicle={() => setInitialCheckoutVehicle(null)}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <UserAuthPage
+              pendingVehicleToBook={pendingVehicleToBook}
+              onLoginSuccess={handleLoginSuccess}
+              onRegisterSuccess={handleRegisterSuccess}
+            />
+          }
         />
-      )}
-
-      {currentRoute === 'AUTH_PAGE' && (
-        <UserAuthPage
-          pendingVehicleToBook={pendingVehicleToBook}
-          onLoginSuccess={handleLoginSuccess}
-          onRegisterSuccess={handleRegisterSuccess}
-          onBackToStorefront={() => setCurrentRoute('USER_PAGE')}
+        <Route
+          path="/home"
+          element={
+            <UserStorefrontPage
+              currentUser={currentUser}
+              onLogout={() => {
+                setCurrentUser(null);
+                sessionStorage.removeItem('user');
+                navigate('/');
+              }}
+              onNavigateToAuth={handleNavigateToAuth}
+              vehicles={vehicles}
+              bookings={bookings}
+              onCreateBooking={handleCreateBooking}
+              initialCheckoutVehicle={initialCheckoutVehicle}
+              onClearInitialCheckoutVehicle={() => setInitialCheckoutVehicle(null)}
+            />
+          }
         />
-      )}
-
-      {currentRoute === 'ADMIN_PAGE' && (
-        <AdminDashboardPage
-          vehicles={vehicles}
-          bookings={bookings}
-          customers={customers}
-          onUpdateBookingStatus={handleUpdateBookingStatus}
-          onToggleCustomerVerify={handleToggleCustomerVerify}
-          onUpdateVehicleStatus={handleUpdateVehicleStatus}
-          onUpdateVehicleImage={handleUpdateVehicleImage}
-          onCreateVehicle={handleCreateVehicle}
+        <Route
+          path="/admin"
+          element={
+            currentUser?.role === 'ADMIN' ? (
+              <AdminDashboardPage
+                vehicles={vehicles}
+                bookings={bookings}
+                customers={customers}
+                onLogout={() => {
+                  setCurrentUser(null);
+                  sessionStorage.removeItem('user');
+                  navigate('/');
+                }}
+                onUpdateBookingStatus={handleUpdateBookingStatus}
+                onToggleCustomerVerify={handleToggleCustomerVerify}
+                onUpdateVehicleStatus={handleUpdateVehicleStatus}
+                onUpdateVehicleImage={handleUpdateVehicleImage}
+                onCreateVehicle={handleCreateVehicle}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
         />
-      )}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
   );
 }
