@@ -10,6 +10,19 @@ class CustomerController {
     }
   }
 
+  async updateAccountStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const { accountStatus } = req.body;
+      if (!['ACTIVE', 'BLOCKED'].includes(accountStatus)) return res.status(400).json({ success: false, message: 'Status akun tidak valid.' });
+      const updated = await userRepo.updateAccountStatus(id, accountStatus);
+      if (!updated) return res.status(404).json({ success: false, message: 'Penyewa tidak ditemukan.' });
+      return res.json({ success: true, data: updated });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
   async toggleVerify(req, res) {
     try {
       const { id } = req.params;

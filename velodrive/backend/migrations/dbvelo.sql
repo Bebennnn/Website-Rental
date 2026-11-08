@@ -11,6 +11,7 @@ CREATE TABLE users (
     sim_a VARCHAR(20) NOT NULL,
     address TEXT NOT NULL,
     verified BOOLEAN NOT NULL DEFAULT FALSE,
+    account_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK (account_status IN ('ACTIVE', 'BLOCKED')),
     joined_at DATE NOT NULL DEFAULT CURRENT_DATE
 );
 
@@ -63,6 +64,8 @@ CREATE TABLE bookings (
     delivery_cost NUMERIC(12, 2) NOT NULL DEFAULT 0,
     deposit_cost NUMERIC(12, 2) NOT NULL DEFAULT 0,
     grand_total NUMERIC(12, 2) NOT NULL,
+    paid_amount NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (paid_amount >= 0),
+    payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID' CHECK (payment_status IN ('UNPAID', 'PARTIAL', 'PAID')),
     status VARCHAR(30) NOT NULL DEFAULT 'PENDING_VERIFICATION'
         CHECK (status IN ('PENDING_VERIFICATION', 'CONFIRMED', 'ON_TRIP', 'COMPLETED', 'CANCELLED')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -88,3 +91,7 @@ INSERT INTO vehicles (id, brand, name, year, branch_id, category, transmission, 
 ('ID-06', 'Honda', 'Honda HR-V 1.5L SE', 2024, 'SBY', 'SUV', 'AT', 'Bensin', 5, 3, 'L 1920 VLD', 280000, 440000, 620000, 'AVAILABLE', 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=900&q=80'),
 ('ID-07', 'Toyota', 'Toyota HiAce Premio 14-Seat', 2023, 'YGY', 'MINIBUS', 'MT', 'Diesel', 14, 6, 'AB 7712 VLD', 550000, 880000, 1300000, 'AVAILABLE', 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80'),
 ('ID-08', 'Hyundai', 'Hyundai Ioniq 5 Prime Long Range', 2024, 'JKT', 'EV', 'AT', 'Listrik (EV)', 5, 3, 'B 1025 EV', 490000, 790000, 1150000, 'AVAILABLE', 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=900&q=80');
+-- Kolom tambahan Anggota 4 (aman dijalankan pada database yang sudah ada).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE';
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS paid_amount NUMERIC(12, 2) NOT NULL DEFAULT 0;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID';

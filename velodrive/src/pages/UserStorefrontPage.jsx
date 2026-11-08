@@ -31,6 +31,7 @@ export default function UserStorefrontPage({
   vehicles,
   bookings,
   onCreateBooking,
+  onCancelBooking,
   initialCheckoutVehicle,
   onClearInitialCheckoutVehicle,
 }) {
@@ -52,7 +53,12 @@ export default function UserStorefrontPage({
   const [checkoutStep, setCheckoutStep] = useState(1);
   const [multiplier, setMultiplier] = useState(1);
   const [deliveryId, setDeliveryId] = useState('PICKUP_GARAGE');
-  const [startDateTime, setStartDateTime] = useState('2025-05-20T09:00');
+  const [startDateTime, setStartDateTime] = useState(() => {
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    tomorrow.setHours(9, 0, 0, 0);
+    const local = new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+  });
   const [pickupHub, setPickupHub] = useState('Garasi Pasteur & Stasiun Bandung');
   const [rentalPurpose, setRentalPurpose] = useState('Kebutuhan Perjalanan Dalam Kota / Keluarga');
   const [formError, setFormError] = useState('');
@@ -116,11 +122,14 @@ export default function UserStorefrontPage({
   const handleConfirmBooking = async (e) => {
     e.preventDefault();
     if (!currentUser || !selectedVehicle || !activeQuote) return;
+    if (currentUser.accountStatus === 'BLOCKED') { setFormError('Akun Anda sedang diblokir dan tidak dapat melakukan booking.'); return; }
+    if (!currentUser.verified) { setFormError('Akun Anda belum diverifikasi admin. Silakan lengkapi data penyewa dan tunggu verifikasi sebelum booking.'); return; }
     if (!rentalPurpose.trim()) {
       setFormError('Mohon isi tujuan pemakaian kendaraan untuk verifikasi admin.');
       return;
     }
-    await onCreateBooking({
+    try {
+      await onCreateBooking({
       userId: currentUser.id,
       customerName: currentUser.name,
       customerEmail: currentUser.email,
@@ -145,9 +154,12 @@ export default function UserStorefrontPage({
       deliveryCost: activeQuote.deliveryCost,
       depositCost: activeQuote.depositCost,
       grandTotal: activeQuote.grandTotal,
-    });
-    closeCheckoutModal();
-    setUserSubView('MY_BOOKINGS');
+      });
+      closeCheckoutModal();
+      setUserSubView('MY_BOOKINGS');
+    } catch (error) {
+      setFormError(error.message || 'Booking gagal dibuat. Silakan coba kembali.');
+    }
   };
   const toggleFavorite = (id) => {
     setFavorites((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
@@ -272,7 +284,7 @@ export default function UserStorefrontPage({
         </main>
       )}
       {userSubView === 'MY_BOOKINGS' && (
-        <BookingHistory currentUser={currentUser} bookings={myBookings} onLogin={() => onNavigateToAuth(null)} onBrowse={() => setUserSubView('HOME')} serviceTypes={SERVICE_TYPES} formatDateTime={formatDateTime} formatIDR={formatIDR} />
+        <BookingHistory currentUser={currentUser} bookings={myBookings} onLogin={() => onNavigateToAuth(null)} onBrowse={() => setUserSubView('HOME')} onCancelBooking={onCancelBooking} serviceTypes={SERVICE_TYPES} formatDateTime={formatDateTime} formatIDR={formatIDR} />
       )}
       <CheckoutModal
         vehicle={selectedVehicle} quote={activeQuote} user={currentUser} step={checkoutStep}

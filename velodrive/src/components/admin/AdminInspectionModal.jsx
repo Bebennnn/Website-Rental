@@ -1,15 +1,23 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function AdminInspectionModal({
   inspectedBooking,
   onClose,
   onStatusChange,
+  onPaymentChange,
   serviceTypes,
   formatDateTime,
   formatIDR,
   CloseIcon,
 }) {
+  const [paidAmount, setPaidAmount] = useState('0');
+  const [paymentError, setPaymentError] = useState('');
+  useEffect(() => { setPaidAmount(String(inspectedBooking?.paidAmount || 0)); setPaymentError(''); }, [inspectedBooking]);
   if (!inspectedBooking) return null;
+  const savePayment = async () => {
+    try { await onPaymentChange(inspectedBooking.code, Number(paidAmount)); setPaymentError(''); }
+    catch (error) { setPaymentError(error.message || 'Gagal memperbarui pembayaran.'); }
+  };
 
   const statusButton = (status, className, activeClass, label) => (
     <button
@@ -74,9 +82,12 @@ export default function AdminInspectionModal({
                 <span>{label}</span><span className="font-semibold">{formatIDR(amount)}</span>
               </div>
             ))}
-            <div className="border-t border-zinc-200 pt-2 flex justify-between text-sm font-extrabold text-orange-600">
-              <span>Total Pembayaran</span><span>{formatIDR(inspectedBooking.grandTotal)}</span>
-            </div>
+            <div className="border-t border-zinc-200 pt-2 flex justify-between text-sm font-extrabold text-orange-600"><span>Total Tagihan</span><span>{formatIDR(inspectedBooking.grandTotal)}</span></div>
+            <div className="flex justify-between"><span>Sudah Dibayar</span><strong>{formatIDR(inspectedBooking.paidAmount || 0)}</strong></div>
+            <div className="flex justify-between"><span>Sisa Tagihan</span><strong>{formatIDR(inspectedBooking.remainingAmount ?? (inspectedBooking.grandTotal - (inspectedBooking.paidAmount || 0)))}</strong></div>
+            <div className="flex justify-between"><span>Status Pembayaran</span><strong>{inspectedBooking.paymentStatus || 'UNPAID'}</strong></div>
+            <div className="pt-3 border-t border-zinc-200 flex flex-wrap gap-2 items-end"><label className="text-xs font-semibold flex-1 min-w-40">Perbarui total pembayaran diterima<input type="number" min="0" max={inspectedBooking.grandTotal} value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} className="mt-1 w-full border border-zinc-300 rounded-lg px-3 py-2" /></label><button type="button" onClick={savePayment} className="bg-zinc-900 text-white rounded-lg px-3 py-2 font-semibold">Simpan Pembayaran</button></div>
+            {paymentError && <p className="text-red-600">{paymentError}</p>}
           </div>
           <div className="space-y-2">
             <p className="font-bold text-zinc-900 uppercase text-[11px]">5. Keputusan Verifikasi & Status Pesanan</p>
